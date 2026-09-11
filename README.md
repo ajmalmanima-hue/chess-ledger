@@ -1,24 +1,48 @@
-# Chess Ledger V5 — Dashboard
+# Chess Ledger
 
-This version adds a local dashboard on top of the existing SQLite data.
+Chess Ledger is a simple desktop application for managing personal chess tournament records and chess-related finances.
 
-## New dashboard features
-- Year filter (All Years / available years)
-- Monthly income vs expense chart
-- Expense breakdown by category
-- Income breakdown by source, including prize money
-- Tournament count by format
-- Existing tournament, chess expense and chess income features remain
-- No rating-change calculation
-- Local SQLite database; no cloud/login required
+## Features
 
-## Run on Linux
-```bash
-npm install
-npm run tauri dev
-```
+- Record chess tournaments
+- Record registration fees and tournament expenses
+- Record prize money
+- Record chess-related expenses
+- Record additional chess income such as coaching and arbiter fees
+- Dashboard with income and expense analysis
+- Monthly income and expense charts
+- Expense and income category breakdown
+- Tournament search and management
+- Local SQLite database
+- JSON backup and restore
+- CSV and print/PDF-friendly reporting
+- Works offline
+- No account or cloud database required
 
-Use the Dashboard tab. The year selector updates the charts without changing stored data.
+## Rating
 
-## Important
-This is a development build. Keep your existing Chess Ledger database/project until this version is fully tested. Do not delete previous versions until data and backup/restore are confirmed.
+Chess Ledger allows players to enter rating information manually. It does not calculate rating changes.
+
+## Privacy
+
+Chess Ledger stores its data locally on the user's computer. Personal chess and financial records are not uploaded to a cloud database.
+
+## Platforms
+
+The project is being developed for:
+
+- Linux
+- Windows
+- Android
+
+## License
+
+Chess Ledger is released under the MIT License.
+
+## Source Code
+
+https://github.com/ajmalmanima-hue/chess-ledger
+
+## Developer
+
+Ajmal Manima
