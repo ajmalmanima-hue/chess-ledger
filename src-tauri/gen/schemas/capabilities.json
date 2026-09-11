@@ -1,0 +1,1 @@
+{"main-capability":{"identifier":"main-capability","description":"Main capability for Chess Ledger","local":true,"windows":["main"],"permissions":["core:default","sql:default","sql:allow-execute"]}}
