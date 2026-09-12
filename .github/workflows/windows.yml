@@ -30,3 +30,10 @@ jobs:
         with:
           projectPath: .
           args: --bundles nsis
+
+      - name: Upload Windows installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: Chess-Ledger-Windows
+          path: src-tauri/target/release/bundle/nsis/*.exe
+          if-no-files-found: error
