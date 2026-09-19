@@ -50,6 +50,62 @@ function renderBars(id, items, empty='No data'){
   const max=Math.max(...items.map(x=>x.value),1);
   el.innerHTML=items.map(x=>`<div class="bar-row"><div class="bar-label" title="${escText(x.label)}">${escText(x.label)}</div><div class="bar-track"><div class="bar-fill" style="width:${Math.max(2,(x.value/max)*100)}%"></div></div><div class="bar-value">${money(x.value)}</div></div>`).join('');
 }
+function renderPerformanceTrend(items){
+  const el=$('performanceTrend');
+  if(!el)return;
+
+  if(!items.length){
+    el.innerHTML='<div class="chart-empty">No performance data</div>';
+    return;
+  }
+
+  const W=760,H=280,left=55,right=20,top=30,bottom=60;
+  const plotW=W-left-right,plotH=H-top-bottom;
+  const xStep=items.length===1?0:plotW/(items.length-1);
+
+  const grid=[];
+  for(let i=0;i<=5;i++){
+    const value=i*20;
+    const y=top+plotH-(value/100)*plotH;
+    grid.push(
+      `<line x1="${left}" y1="${y}" x2="${W-right}" y2="${y}" class="gridline"/>`+
+      `<text x="${left-10}" y="${y+4}" text-anchor="end" class="axis-text">${value}</text>`
+    );
+  }
+
+  const points=items.map((item,i)=>{
+    const x=items.length===1?left+plotW/2:left+i*xStep;
+    const value=Math.max(0,Math.min(100,Number(item.value)||0));
+    const y=top+plotH-(value/100)*plotH;
+    return {x,y,value,item};
+  });
+
+  const line=points.map((p,i)=>
+    `${i?'L':'M'} ${p.x} ${p.y}`
+  ).join(' ');
+
+  const marks=points.map(p=>{
+    const shortName=String(p.item.label||'').length>18
+      ?String(p.item.label).slice(0,18)+'…'
+      :String(p.item.label||'');
+
+    return `
+      <circle cx="${p.x}" cy="${p.y}" r="5" class="performance-point">
+        <title>${escText(p.item.label)}: ${p.value.toFixed(1)}</title>
+      </circle>
+      <text x="${p.x}" y="${p.y-12}" text-anchor="middle" class="performance-value">${p.value.toFixed(1)}</text>
+      <text x="${p.x}" y="${H-28}" text-anchor="middle" class="axis-text">${escText(shortName)}</text>
+    `;
+  }).join('');
+
+  el.innerHTML=`<svg viewBox="0 0 ${W} ${H}" class="performance-trend-svg">
+    ${grid.join('')}
+    <path d="${line}" class="performance-line"/>
+    ${marks}
+    <line x1="${left}" y1="${top+plotH}" x2="${W-right}" y2="${top+plotH}" class="axis-line"/>
+  </svg>`;
+}
+
 function renderMonthlyChart(ts,es,is){
   const svg=$('monthlyChart'); if(!svg)return;
   const months=Array.from({length:12},(_,i)=>i);
@@ -62,9 +118,116 @@ function renderMonthlyChart(ts,es,is){
   months.forEach(i=>{const x=left+i*step+step/2; const ih=(incomeBy[i]/max)*plotH,eh=(expenseBy[i]/max)*plotH;bars.push(`<rect x="${x-barW-2}" y="${top+plotH-ih}" width="${barW}" height="${ih}" class="income-bar"><title>${labels[i]} income: ${money(incomeBy[i])}</title></rect><rect x="${x+2}" y="${top+plotH-eh}" width="${barW}" height="${eh}" class="expense-bar"><title>${labels[i]} expense: ${money(expenseBy[i])}</title></rect><text x="${x}" y="${H-14}" text-anchor="middle" class="axis-text">${labels[i]}</text>`)});
   svg.innerHTML=grid.join('')+bars.join('')+`<line x1="${left}" y1="${top+plotH}" x2="${W-right}" y2="${top+plotH}" class="axis-line"/><g transform="translate(${W-170},8)"><rect width="12" height="12" class="income-bar"/><text x="18" y="10" class="axis-text">Income</text><rect x="75" width="12" height="12" class="expense-bar"/><text x="93" y="10" class="axis-text">Expense</text></g>`;
 }
+function renderPerformance(){
+  const selectedYear=$('performanceYear').value||'all';
+  const rows=selectedYear==='all'
+    ? data
+    : data.filter(t=>yearOf(t.date)===selectedYear);
+
+  const performanceRows=rows.filter(t=>Number(t.performance)>0);
+
+  const values=performanceRows.map(t=>Number(t.performance));
+  const average=values.length
+    ? values.reduce((a,b)=>a+b,0)/values.length
+    : 0;
+  const best=values.length?Math.max(...values):0;
+
+  const positions=performanceRows
+    .map(t=>Number(t.position))
+    .filter(p=>p>0);
+
+  const bestPosition=positions.length?Math.min(...positions):0;
+
+  $('perfCount').textContent=performanceRows.length;
+  $('avgTPS').textContent=average?average.toFixed(1):'—';
+  $('bestTPS').textContent=best?best.toFixed(1):'—';
+  $('bestPosition').textContent=bestPosition?bestPosition:'—';
+
+  const formatMap={};
+  performanceRows.forEach(t=>{
+    const key=t.format||'Other';
+    if(!formatMap[key])formatMap[key]=[];
+    formatMap[key].push(Number(t.performance));
+  });
+
+  const formatData=Object.entries(formatMap)
+    .map(([label,values])=>({
+      label,
+      value:values.reduce((a,b)=>a+b,0)/values.length
+    }))
+    .sort((a,b)=>b.value-a.value);
+
+  renderBars(
+    'performanceFormat',
+    formatData,
+    'No performance data'
+  );
+
+  const categoryMap={};
+  performanceRows.forEach(t=>{
+    const key=cat(t)||'Other';
+    if(!categoryMap[key])categoryMap[key]=[];
+    categoryMap[key].push(Number(t.performance));
+  });
+
+  const categoryData=Object.entries(categoryMap)
+    .map(([label,values])=>({
+      label,
+      value:values.reduce((a,b)=>a+b,0)/values.length
+    }))
+    .sort((a,b)=>b.value-a.value);
+
+  renderBars(
+    'performanceCategory',
+    categoryData,
+    'No performance data'
+  );
+
+  const modeMap={};
+  performanceRows.forEach(t=>{
+    const key=t.mode||'Offline';
+    if(!modeMap[key])modeMap[key]=[];
+    modeMap[key].push(Number(t.performance));
+  });
+
+  const modeData=Object.entries(modeMap)
+    .map(([label,values])=>({
+      label,
+      value:values.reduce((a,b)=>a+b,0)/values.length
+    }))
+    .sort((a,b)=>b.value-a.value);
+
+  renderBars(
+    'performanceMode',
+    modeData,
+    'No performance data'
+  );
+
+  const trendData=performanceRows
+    .slice()
+    .sort((a,b)=>a.date.localeCompare(b.date))
+    .map(t=>({
+      label:t.name,
+      value:Number(t.performance)
+    }));
+
+  renderPerformanceTrend(trendData);
+}
+
 function renderDashboard(){
   buildYearFilter();
   const {ts,es,is}=filteredDash();
+  const performanceRows=ts.filter(t=>Number(t.performance)>0);
+  const perfValues=performanceRows.map(t=>Number(t.performance));
+  const avgTPS=perfValues.length?perfValues.reduce((a,b)=>a+b,0)/perfValues.length:0;
+  const bestTPS=perfValues.length?Math.max(...perfValues):0;
+  const positions=performanceRows.map(t=>Number(t.position)).filter(p=>p>0);
+  const bestPosition=positions.length?Math.min(...positions):0;
+
+  $('perfCount').textContent=performanceRows.length;
+  $('avgTPS').textContent=avgTPS?avgTPS.toFixed(1):'—';
+  $('bestTPS').textContent=bestTPS?bestTPS.toFixed(1):'—';
+  $('bestPosition').textContent=bestPosition?bestPosition:'—';
   renderMonthlyChart(ts,es,is);
   const expenseMap={Registration:0,Travel:0,Food:0,Accommodation:0,Other:0};
   ts.forEach(t=>{expenseMap.Registration+=Number(t.registration||0);expenseMap.Travel+=Number(t.travel||0);expenseMap.Food+=Number(t.food||0);expenseMap.Accommodation+=Number(t.accommodation||0);expenseMap.Other+=Number(t.other||0)});
@@ -155,6 +318,23 @@ $('listViewBtn').onclick=()=>{
 };
 
 function clearModalRequired(){['name','date','incomeDate','incomeDescription','incomeAmount','expenseDate','expenseDescription','expenseAmount'].forEach(id=>{const el=$(id);if(el)el.required=false})}
+function calculateTPS(){
+  const participants=Number($('participants').value||0);
+  const rounds=Number($('rounds').value||0);
+  const position=Number($('position').value||0);
+  const points=Number($('score').value||0);
+
+  if(!participants||participants<2||!rounds||rounds<1||!position||position<1||position>participants||points<0||points>rounds){
+    $('performance').value='';
+    return;
+  }
+
+  const scorePerformance=(points/rounds)*100;
+  const positionPerformance=((participants-position)/(participants-1))*100;
+  const tps=(scorePerformance*0.70)+(positionPerformance*0.30);
+
+  $('performance').value=tps.toFixed(1);
+}
 function openTournament(t){clearModalRequired();mode='tournament';edit=t||null;$('title').textContent=t?'Edit Tournament':'Add Tournament';$('tournamentFields').classList.remove('hidden');$('expenseFields').classList.add('hidden');$('incomeFields').classList.add('hidden');$('expenseDescription').required=false;$('expenseAmount').required=false;let fields={id:'id',name:'name',date:'date',location:'location',organizer:'organizer',mode:'mode',tournamentType:'tournament_type',ratingCategory:'rating_category',customCategory:'custom_category',format:'format',participants:'participants',rounds:'rounds',time:'time_control',rating:'rating',position:'position',score:'score',performance:'performance',prizeInput:'prize',registration:'registration',travel:'travel',food:'food',accommodation:'accommodation',other:'other',notes:'notes'};for(const [id,key] of Object.entries(fields))$(id).value=t?(t[key]??''):'';if(!t){$('date').value=today();$('tournamentType').value='Open';$('ratingCategory').value='Open';$('format').value='Classical';$('mode').value='Offline';['prizeInput','registration','travel','food','accommodation','other'].forEach(id=>$(id).value=0)}calc();$('modal').classList.remove('hidden')}
 function openIncome(e){clearModalRequired();mode='income';edit=e||null;$('title').textContent=e?'Edit Chess Income':'Add Chess Income';$('tournamentFields').classList.add('hidden');$('expenseFields').classList.add('hidden');$('incomeFields').classList.remove('hidden');$('expenseDescription').required=false;$('expenseAmount').required=false;$('incomeDescription').required=true;$('incomeAmount').required=true;$('incomeDate').value=e?.date||today();$('incomeCategory').value=e?.category||'Coaching / Training';$('incomeDescription').value=e?.description||'';$('incomeAmount').value=e?.amount??'';$('incomeNotes').value=e?.notes||'';$('modal').classList.remove('hidden')}
 function openExpense(e){clearModalRequired();mode='expense';edit=e||null;$('title').textContent=e?'Edit Chess Expense':'Add Chess Expense';$('tournamentFields').classList.add('hidden');$('expenseFields').classList.remove('hidden');$('incomeFields').classList.add('hidden');$('expenseDescription').required=true;$('expenseAmount').required=true;$('id').value=e?.id||'';$('expenseDate').value=e?.date||today();$('expenseCategory').value=e?.category||'Chess Books';$('expenseDescription').value=e?.description||'';$('expenseAmount').value=e?.amount??'';$('expenseNotes').value=e?.notes||'';$('modal').classList.remove('hidden')}
@@ -164,11 +344,14 @@ window.delT=async id=>{if(confirm('Delete this tournament?')){await db.execute('
 window.delE=async id=>{if(confirm('Delete this chess expense?')){await db.execute('DELETE FROM chess_expenses WHERE id=?',[id]);await load()}};window.delI=async id=>{if(confirm('Delete this chess income?')){await db.execute('DELETE FROM chess_income WHERE id=?',[id]);await load()}};
 function calc(){let e=['registration','travel','food','accommodation','other'].reduce((s,id)=>s+Number($(id).value||0),0),n=Number($('prizeInput').value||0)-e;$('total').textContent=money(e);$('result').textContent=(n>=0?'+':'-')+money(Math.abs(n));$('result').className=n>=0?'positive':'negative'}
 $('addBtn').onclick=()=>openTournament();$('addExpenseBtn').onclick=()=>openExpense();$('addIncomeBtn').onclick=()=>openIncome();$('close').onclick=close;$('cancel').onclick=close;$('search').oninput=render;$('expenseSearch').oninput=render;$('incomeSearch').oninput=render;['registration','travel','food','accommodation','other','prizeInput'].forEach(id=>$(id).oninput=calc);
-document.querySelectorAll('.tab').forEach(btn=>btn.onclick=()=>{document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));btn.classList.add('active');let tab=btn.dataset.tab;$('dashboardSection').classList.toggle('hidden',tab!=='dashboard');$('tournamentSection').classList.toggle('hidden',tab!=='tournaments');$('expenseSection').classList.toggle('hidden',tab!=='expenses');$('incomeSection').classList.toggle('hidden',tab!=='income');if(tab==='dashboard')renderDashboard()});
+document.querySelectorAll('.tab').forEach(btn=>btn.onclick=()=>{document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));btn.classList.add('active');let tab=btn.dataset.tab;$('dashboardSection').classList.toggle('hidden',tab!=='dashboard');$('tournamentSection').classList.toggle('hidden',tab!=='tournaments');$('expenseSection').classList.toggle('hidden',tab!=='expenses');$('incomeSection').classList.toggle('hidden',tab!=='income');$('performanceSection').classList.toggle('hidden',tab!=='performance');if(tab==='dashboard')renderDashboard();if(tab==='performance')renderPerformance()});
 $('dashYear').onchange=()=>{dashYear=$('dashYear').value;renderDashboard()};
+$('performanceYear').onchange=()=>renderPerformance();
+$('performanceYear').innerHTML='<option value="all">All Years</option>'+[...new Set(data.map(t=>yearOf(t.date)).filter(Boolean))].sort((a,b)=>b.localeCompare(a)).map(y=>`<option value="${y}">${y}</option>`).join('');
+
 $('form').onsubmit=async e=>{e.preventDefault();try{if(mode==='expense'){const id=edit?.id||newId(),date=$('expenseDate').value,description=$('expenseDescription').value.trim(),amount=Number($('expenseAmount').value);if(!date||!description||!(amount>0)){alert('Please enter Date, Description and a valid Amount.');return}const x=[id,date,$('expenseCategory').value,description,amount,$('expenseNotes').value.trim()];if(edit)await db.execute('UPDATE chess_expenses SET date=?,category=?,description=?,amount=?,notes=? WHERE id=?',[x[1],x[2],x[3],x[4],x[5],id]);else await db.execute('INSERT INTO chess_expenses (id,date,category,description,amount,notes) VALUES (?,?,?,?,?,?)',x);close();await load();return}
 if(mode==='income'){const id=edit?.id||newId(),date=$('incomeDate').value,description=$('incomeDescription').value.trim(),amount=Number($('incomeAmount').value);if(!date||!description||!(amount>0)){alert('Please enter Date, Description and a valid Amount.');return}const x=[id,date,$('incomeCategory').value,description,amount,$('incomeNotes').value.trim()];if(edit)await db.execute('UPDATE chess_income SET date=?,category=?,description=?,amount=?,notes=? WHERE id=?',[x[1],x[2],x[3],x[4],x[5],id]);else await db.execute('INSERT INTO chess_income (id,date,category,description,amount,notes) VALUES (?,?,?,?,?,?)',x);close();await load();return}
-const id=edit?.id||newId();const vals={name:$('name').value.trim(),date:$('date').value,location:$('location').value.trim(),organizer:$('organizer').value.trim(),mode:$('mode').value,tournament_type:$('tournamentType').value,rating_category:$('ratingCategory').value,custom_category:$('customCategory').value.trim(),format:$('format').value,participants:Number($('participants').value||0),rounds:Number($('rounds').value||0),time_control:$('time').value.trim(),rating:Number($('rating').value||0),position:Number($('position').value||0),score:$('score').value.trim(),performance:Number($('performance').value||0),prize:Number($('prizeInput').value||0),registration:Number($('registration').value||0),travel:Number($('travel').value||0),food:Number($('food').value||0),accommodation:Number($('accommodation').value||0),other:Number($('other').value||0),notes:$('notes').value.trim()};if(!vals.name||!vals.date){alert('Please enter tournament name and date.');return}const p=[vals.name,vals.date,vals.location,vals.organizer,vals.tournament_type,vals.rating_category,vals.custom_category,vals.format,vals.participants,vals.rounds,vals.time_control,vals.rating,vals.position,vals.score,vals.performance,vals.prize,vals.registration,vals.travel,vals.food,vals.accommodation,vals.other,vals.notes];if(edit)await db.execute(`UPDATE tournaments SET name=?,date=?,location=?,organizer=?,mode=?,tournament_type=?,rating_category=?,custom_category=?,format=?,participants=?,rounds=?,time_control=?,rating=?,position=?,score=?,performance=?,prize=?,registration=?,travel=?,food=?,accommodation=?,other=?,notes=? WHERE id=?`,[vals.name,vals.date,vals.location,vals.organizer,vals.mode,...p.slice(4),id]);else await db.execute(`INSERT INTO tournaments (id,name,date,location,organizer,mode,tournament_type,rating_category,custom_category,format,participants,rounds,time_control,rating,position,score,performance,prize,registration,travel,food,accommodation,other,notes) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,[id,vals.name,vals.date,vals.location,vals.organizer,vals.mode,...p.slice(4)]);close();await load()}catch(err){console.error(err);alert('Could not save. '+err)}};
+const id=edit?.id||newId();const vals={name:$('name').value.trim(),date:$('date').value,location:$('location').value.trim(),organizer:$('organizer').value.trim(),mode:$('mode').value,tournament_type:$('tournamentType').value,rating_category:$('ratingCategory').value,custom_category:$('customCategory').value.trim(),format:$('format').value,participants:Number($('participants').value||0),rounds:Number($('rounds').value||0),time_control:$('time').value.trim(),rating:Number($('rating').value||0),position:Number($('position').value||0),score:$('score').value.trim(),performance:Number($('performance').value||0),prize:Number($('prizeInput').value||0),registration:Number($('registration').value||0),travel:Number($('travel').value||0),food:Number($('food').value||0),accommodation:Number($('accommodation').value||0),other:Number($('other').value||0),notes:$('notes').value.trim()};if(!vals.name||!vals.date){alert('Please enter tournament name and date.');return}const p=[vals.name,vals.date,vals.location,vals.organizer,vals.tournament_type,vals.rating_category,vals.custom_category,vals.format,vals.participants,vals.rounds,vals.time_control,vals.rating,vals.position,vals.score,vals.performance,vals.prize,vals.registration,vals.travel,vals.food,vals.accommodation,vals.other,vals.notes];if(edit)await db.execute(`UPDATE tournaments SET name=?,date=?,location=?,organizer=?,mode=?,tournament_type=?,rating_category=?,custom_category=?,format=?,participants=?,rounds=?,time_control=?,rating=?,position=?,score=?,performance=?,prize=?,registration=?,travel=?,food=?,accommodation=?,other=?,notes=? WHERE id=?`,[vals.name,vals.date,vals.location,vals.organizer,vals.mode,...p.slice(4),id]);else await db.execute(`INSERT INTO tournaments (id,name,date,location,organizer,mode,tournament_type,rating_category,custom_category,format,participants,rounds,time_control,rating,position,score,performance,prize,registration,travel,food,accommodation,other,notes) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,[id,vals.name,vals.date,vals.location,vals.organizer,vals.mode,...p.slice(4)]);close();await load()}catch(err){console.error(err);alert('Could not save. '+err)}};
 async function backup(){
   try{
     const payload={version:4,exportedAt:new Date().toISOString(),tournaments:data,expenses,incomes};
@@ -183,5 +366,8 @@ async function backup(){
     alert('Could not create backup: '+err.message);
   }
 }
-$('backupBtn').onclick=backup;$('restoreBtn').onclick=()=>$('restoreFile').click();$('restoreFile').onchange=async()=>{const f=$('restoreFile').files[0];if(!f)return;try{const p=JSON.parse(await f.text());if(!Array.isArray(p.tournaments)||!Array.isArray(p.expenses))throw new Error('Invalid backup');if(!Array.isArray(p.incomes))p.incomes=[];if(!confirm('Restore backup? Existing data will be replaced.'))return;await db.execute('DELETE FROM tournaments');await db.execute('DELETE FROM chess_expenses');await db.execute('DELETE FROM chess_income');for(const t of p.tournaments){await db.execute(`INSERT INTO tournaments (id,name,date,location,organizer,tournament_type,rating_category,custom_category,format,participants,rounds,time_control,rating,position,score,performance,prize,registration,travel,food,accommodation,other,notes) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,[t.id||newId(),t.name||'',t.date||today(),t.location||'',t.organizer||'',t.tournament_type||t.tournamentType||'Open',t.rating_category||t.ratingCategory||'Open',t.custom_category||t.customCategory||'',t.format||'Classical',Number(t.participants||0),Number(t.rounds||0),t.time_control||t.time||'',Number(t.rating||0),Number(t.position||0),t.score||'',Number(t.performance||0),Number(t.prize||0),Number(t.registration||0),Number(t.travel||0),Number(t.food||0),Number(t.accommodation||0),Number(t.other||0),t.notes||''])}for(const x of p.expenses){await db.execute('INSERT INTO chess_expenses (id,date,category,description,amount,notes) VALUES (?,?,?,?,?,?)',[x.id||newId(),x.date||today(),x.category||'Other Chess Expense',x.description||'Expense',Number(x.amount||0),x.notes||''])}for(const x of p.incomes){await db.execute('INSERT INTO chess_income (id,date,category,description,amount,notes) VALUES (?,?,?,?,?,?)',[x.id||newId(),x.date||today(),x.category||'Other Chess Income',x.description||'Income',Number(x.amount||0),x.notes||''])}await load();alert('Backup restored successfully.')}catch(err){alert('Could not restore backup: '+err.message)}$('restoreFile').value=''};
+$('backupBtn').onclick=backup;$('restoreBtn').onclick=()=>$('restoreFile').click();$('restoreFile').onchange=async()=>{const f=$('restoreFile').files[0];if(!f)return;try{const p=JSON.parse(await f.text());if(!Array.isArray(p.tournaments)||!Array.isArray(p.expenses))throw new Error('Invalid backup');if(!Array.isArray(p.incomes))p.incomes=[];if(!confirm('Restore backup? Existing data will be replaced.'))return;await db.execute('DELETE FROM tournaments');await db.execute('DELETE FROM chess_expenses');await db.execute('DELETE FROM chess_income');for(const t of p.tournaments){await db.execute(`INSERT INTO tournaments (id,name,date,location,organizer,tournament_type,rating_category,custom_category,format,participants,rounds,time_control,rating,position,score,performance,prize,registration,travel,food,accommodation,other,notes) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,[t.id||newId(),t.name||'',t.date||today(),t.location||'',t.organizer||'',t.tournament_type||t.tournamentType||'Open',t.rating_category||t.ratingCategory||'Open',t.custom_category||t.customCategory||'',t.format||'Classical',Number(t.participants||0),Number(t.rounds||0),t.time_control||t.time||'',Number(t.rating||0),Number(t.position||0),t.score||'',Number(t.performance||0),Number(t.prize||0),Number(t.registration||0),Number(t.travel||0),Number(t.food||0),Number(t.accommodation||0),Number(t.other||0),t.notes||''])}for(const x of p.expenses){await db.execute('INSERT INTO chess_expenses (id,date,category,description,amount,notes) VALUES (?,?,?,?,?,?)',[x.id||newId(),x.date||today(),x.category||'Other Chess Expense',x.description||'Expense',Number(x.amount||0),x.notes||''])}for(const x of p.incomes){await db.execute('INSERT INTO chess_income (id,date,category,description,amount,notes) VALUES (?,?,?,?,?,?)',[x.id||newId(),x.date||today(),x.category||'Other Chess Income',x.description||'Income',Number(x.amount||0),x.notes||''])}await load();alert('Backup restored successfully.')}catch(err){alert('Could not restore backup: '+err.message)}$('restoreFile').value=''};
 init().catch(err=>{console.error(err);document.body.insertAdjacentHTML('afterbegin','<div style="padding:12px;background:#fee;color:#900">Database could not be opened. Please run the Tauri app, not index.html directly.</div>')});
+['participants','rounds','position','score'].forEach(id=>{
+  $(id).addEventListener('input',calculateTPS);
+});

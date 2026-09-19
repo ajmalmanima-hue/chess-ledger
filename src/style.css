@@ -134,3 +134,8 @@
   }
 }
 
+
+.performance-trend-svg{width:100%;height:auto;display:block}
+.performance-line{stroke:#2563eb;stroke-width:3;fill:none}
+.performance-point{fill:#2563eb;stroke:#fff;stroke-width:2}
+.performance-value{font-size:12px;font-weight:700;fill:#1f2937}
