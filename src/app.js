@@ -26,7 +26,7 @@ async function init(){
   await db.execute(`CREATE TABLE IF NOT EXISTS chess_income (id TEXT PRIMARY KEY,date TEXT NOT NULL,category TEXT NOT NULL,description TEXT NOT NULL,amount REAL NOT NULL,notes TEXT,created_at TEXT DEFAULT CURRENT_TIMESTAMP)`);
   await load();
 }
-async function load(){data=await db.select('SELECT * FROM tournaments ORDER BY date DESC, created_at DESC');expenses=await db.select('SELECT * FROM chess_expenses ORDER BY date DESC, created_at DESC');incomes=await db.select('SELECT * FROM chess_income ORDER BY date DESC, created_at DESC');render()}
+async function load(){data=await db.select('SELECT * FROM tournaments ORDER BY date DESC, created_at DESC');expenses=await db.select('SELECT * FROM chess_expenses ORDER BY date DESC, created_at DESC');incomes=await db.select('SELECT * FROM chess_income ORDER BY date DESC, created_at DESC');buildPerformanceYearFilter();render()}
 function yearOf(date){return String(date||'').slice(0,4)}
 function escText(x){return esc(x)}
 function buildYearFilter(){
@@ -433,8 +433,17 @@ function calc(){let e=['registration','travel','food','accommodation','other'].r
 $('addBtn').onclick=()=>openTournament();$('addExpenseBtn').onclick=()=>openExpense();$('addIncomeBtn').onclick=()=>openIncome();$('close').onclick=close;$('cancel').onclick=close;$('search').oninput=render;$('expenseSearch').oninput=render;$('incomeSearch').oninput=render;['registration','travel','food','accommodation','other','prizeInput'].forEach(id=>$(id).oninput=calc);
 document.querySelectorAll('.tab').forEach(btn=>btn.onclick=()=>{document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));btn.classList.add('active');let tab=btn.dataset.tab;$('dashboardSection').classList.toggle('hidden',tab!=='dashboard');$('tournamentSection').classList.toggle('hidden',tab!=='tournaments');$('expenseSection').classList.toggle('hidden',tab!=='expenses');$('incomeSection').classList.toggle('hidden',tab!=='income');$('performanceSection').classList.toggle('hidden',tab!=='performance');if(tab==='dashboard')renderDashboard();if(tab==='performance')renderPerformance()});
 $('dashYear').onchange=()=>{dashYear=$('dashYear').value;renderDashboard()};
+
 $('performanceYear').onchange=()=>renderPerformance();
-$('performanceYear').innerHTML='<option value="all">All Years</option>'+[...new Set(data.map(t=>yearOf(t.date)).filter(Boolean))].sort((a,b)=>b.localeCompare(a)).map(y=>`<option value="${y}">${y}</option>`).join('');
+function buildPerformanceYearFilter(){
+  const sel=$('performanceYear');
+  if(!sel)return;
+  const current=sel.value||'all';
+  const years=[...new Set(data.map(t=>yearOf(t.date)).filter(Boolean))].sort((a,b)=>b.localeCompare(a));
+  sel.innerHTML='<option value="all">All Years</option>'+years.map(y=>`<option value="${y}">${y}</option>`).join('');
+  sel.value=years.includes(current)?current:'all';
+}
+buildPerformanceYearFilter();
 
 $('form').onsubmit=async e=>{e.preventDefault();try{if(mode==='expense'){const id=edit?.id||newId(),date=$('expenseDate').value,description=$('expenseDescription').value.trim(),amount=Number($('expenseAmount').value);if(!date||!description||!(amount>0)){alert('Please enter Date, Description and a valid Amount.');return}const x=[id,date,$('expenseCategory').value,description,amount,$('expenseNotes').value.trim()];if(edit)await db.execute('UPDATE chess_expenses SET date=?,category=?,description=?,amount=?,notes=? WHERE id=?',[x[1],x[2],x[3],x[4],x[5],id]);else await db.execute('INSERT INTO chess_expenses (id,date,category,description,amount,notes) VALUES (?,?,?,?,?,?)',x);close();await load();return}
 if(mode==='income'){const id=edit?.id||newId(),date=$('incomeDate').value,description=$('incomeDescription').value.trim(),amount=Number($('incomeAmount').value);if(!date||!description||!(amount>0)){alert('Please enter Date, Description and a valid Amount.');return}const x=[id,date,$('incomeCategory').value,description,amount,$('incomeNotes').value.trim()];if(edit)await db.execute('UPDATE chess_income SET date=?,category=?,description=?,amount=?,notes=? WHERE id=?',[x[1],x[2],x[3],x[4],x[5],id]);else await db.execute('INSERT INTO chess_income (id,date,category,description,amount,notes) VALUES (?,?,?,?,?,?)',x);close();await load();return}
