@@ -143,6 +143,68 @@ function renderPerformance(){
   $('bestTPS').textContent=best?best.toFixed(1):'—';
   $('bestPosition').textContent=bestPosition?bestPosition:'—';
 
+  const bestFormatEntry=Object.entries(
+    performanceRows.reduce((map,t)=>{
+      const key=t.format||'Other';
+      if(!map[key])map[key]=[];
+      map[key].push(Number(t.performance));
+      return map;
+    },{})
+  )
+  .map(([label,values])=>({
+    label,
+    value:values.reduce((a,b)=>a+b,0)/values.length
+  }))
+  .sort((a,b)=>b.value-a.value)[0];
+
+  const bestCategoryEntry=Object.entries(
+    performanceRows.reduce((map,t)=>{
+      const key=cat(t)||'Other';
+      if(!map[key])map[key]=[];
+      map[key].push(Number(t.performance));
+      return map;
+    },{})
+  )
+  .map(([label,values])=>({
+    label,
+    value:values.reduce((a,b)=>a+b,0)/values.length
+  }))
+  .sort((a,b)=>b.value-a.value)[0];
+
+  const bestModeEntry=Object.entries(
+    performanceRows.reduce((map,t)=>{
+      const key=t.mode||'Offline';
+      if(!map[key])map[key]=[];
+      map[key].push(Number(t.performance));
+      return map;
+    },{})
+  )
+  .map(([label,values])=>({
+    label,
+    value:values.reduce((a,b)=>a+b,0)/values.length
+  }))
+  .sort((a,b)=>b.value-a.value)[0];
+
+  const bestTournament=performanceRows
+    .slice()
+    .sort((a,b)=>Number(b.performance)-Number(a.performance))[0];
+
+  $('bestFormat').textContent=bestFormatEntry
+    ? `${bestFormatEntry.label} (${bestFormatEntry.value.toFixed(1)})`
+    : '—';
+
+  $('bestCategory').textContent=bestCategoryEntry
+    ? `${bestCategoryEntry.label} (${bestCategoryEntry.value.toFixed(1)})`
+    : '—';
+
+  $('bestMode').textContent=bestModeEntry
+    ? `${bestModeEntry.label} (${bestModeEntry.value.toFixed(1)})`
+    : '—';
+
+  $('bestTournament').textContent=bestTournament
+    ? `${bestTournament.name} (${Number(bestTournament.performance).toFixed(1)})`
+    : '—';
+
   const formatMap={};
   performanceRows.forEach(t=>{
     const key=t.format||'Other';
@@ -201,6 +263,31 @@ function renderPerformance(){
     'performanceMode',
     modeData,
     'No performance data'
+  );
+
+  const costData=performanceRows
+    .map(t=>{
+      const cost=
+        Number(t.registration||0)+
+        Number(t.travel||0)+
+        Number(t.food||0)+
+        Number(t.accommodation||0)+
+        Number(t.other||0);
+
+      if(cost<=0)return null;
+
+      return {
+        label:t.name,
+        value:(Number(t.performance)/cost)*1000
+      };
+    })
+    .filter(Boolean)
+    .sort((a,b)=>b.value-a.value);
+
+  renderBars(
+    'performanceCost',
+    costData,
+    'No cost data available'
   );
 
   const trendData=performanceRows
