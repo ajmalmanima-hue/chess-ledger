@@ -340,7 +340,9 @@ function render(){
  let eq=$('expenseSearch').value.toLowerCase();let erows=expenses.filter(e=>(e.description+' '+e.category+' '+(e.notes||'')).toLowerCase().includes(eq));$('expenseEmpty').style.display=erows.length?'none':'block';$('expenseList').innerHTML=erows.map(e=>`<div class="row"><div><h3>♟ ${esc(e.description)}</h3><div class="meta">${esc(e.date)} • ${esc(e.category)}</div>${e.notes?`<div class="meta">${esc(e.notes)}</div>`:''}<div class="actions"><button onclick="editE('${e.id}')">Edit</button><button onclick="delE('${e.id}')">Delete</button></div></div><div><b>${money(e.amount)}</b></div></div>`).join('');
  let iq=$('incomeSearch').value.toLowerCase();let irows=incomes.filter(e=>(e.description+' '+e.category+' '+(e.notes||'')).toLowerCase().includes(iq));$('incomeEmpty').style.display=irows.length?'none':'block';$('incomeList').innerHTML=irows.map(e=>`<div class="row"><div><h3>♟ ${esc(e.description)}</h3><div class="meta">${esc(e.date)} • ${esc(e.category)}</div>${e.notes?`<div class="meta">${esc(e.notes)}</div>`:''}<div class="actions"><button onclick="editI('${e.id}')">Edit</button><button onclick="delI('${e.id}')">Delete</button></div></div><div><b class="positive">+${money(e.amount)}</b></div></div>`).join('');
 }
+ 
  renderDashboard();
+ renderPerformance();
 
 window.tournamentView='card';
 
