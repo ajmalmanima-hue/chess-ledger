@@ -313,31 +313,109 @@ renderBars(
 
 function renderDashboard(){
   buildYearFilter();
-  const {ts,es,is}=filteredDash();
-  const performanceRows=ts.filter(t=>Number(t.performance)>0);
-  const perfValues=performanceRows.map(t=>Number(t.performance));
-  const avgTPS=perfValues.length?perfValues.reduce((a,b)=>a+b,0)/perfValues.length:0;
-  const bestTPS=perfValues.length?Math.max(...perfValues):0;
-  const positions=performanceRows.map(t=>Number(t.position)).filter(p=>p>0);
-  const bestPosition=positions.length?Math.min(...positions):0;
 
-  $('perfCount').textContent=performanceRows.length;
-  $('avgTPS').textContent=avgTPS?avgTPS.toFixed(1):'—';
-  $('bestTPS').textContent=bestTPS?bestTPS.toFixed(1):'—';
-  $('bestPosition').textContent=bestPosition?bestPosition:'—';
+  const {ts,es,is}=filteredDash();
+
+  $('count').textContent=ts.length;
+
+  const tournamentExpense=ts.reduce((s,t)=>s+expenseTotal(t),0);
+  const chessExpense=es.reduce((s,e)=>s+Number(e.amount||0),0);
+  const prize=ts.reduce((s,t)=>s+Number(t.prize||0),0);
+  const otherIncome=is.reduce((s,e)=>s+Number(e.amount||0),0);
+
+  const overallExpense=tournamentExpense+chessExpense;
+  const totalIncome=prize+otherIncome;
+  const netResult=totalIncome-overallExpense;
+
+  $('expense').textContent=money(tournamentExpense);
+  $('chessExpense').textContent=money(chessExpense);
+  $('prize').textContent=money(prize);
+  $('otherIncome').textContent=money(otherIncome);
+  $('totalIncome').textContent=money(totalIncome);
+  $('overall').textContent=money(overallExpense);
+  $('netOverall').textContent=(netResult>=0?'+':'-')+money(Math.abs(netResult));
+  $('netOverall').className=netResult>=0?'positive':'negative';
+
   renderMonthlyChart(ts,es,is);
-  const expenseMap={Registration:0,Travel:0,Food:0,Accommodation:0,Other:0};
-  ts.forEach(t=>{expenseMap.Registration+=Number(t.registration||0);expenseMap.Travel+=Number(t.travel||0);expenseMap.Food+=Number(t.food||0);expenseMap.Accommodation+=Number(t.accommodation||0);expenseMap.Other+=Number(t.other||0)});
-  es.forEach(e=>{const k=e.category||'Other';expenseMap[k]=(expenseMap[k]||0)+Number(e.amount||0)});
-  renderBars('expenseChart',Object.entries(expenseMap).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]).map(([label,value])=>({label,value})),'No expenses in this period');
-  const incomeMap={'Other Income':0,'Prize Money':0};
-is.forEach(e=>{incomeMap['Other Income']+=Number(e.amount||0)});
-ts.forEach(t=>{incomeMap['Prize Money']+=Number(t.prize||0)});
-  renderBars('incomeChart',Object.entries(incomeMap).sort((a,b)=>b[1]-a[1]).map(([label,value])=>({label,value})),'No income in this period');
-  const formatMap={}; ts.forEach(t=>{const k=t.format||'Other';formatMap[k]=(formatMap[k]||0)+1});
-  renderBars('formatChart',Object.entries(formatMap).sort((a,b)=>b[1]-a[1]).map(([label,value])=>({label,value})).map(x=>({...x,displayCount:true})),'No tournaments in this period');
-  const formatEl=$('formatChart'); if(formatEl) formatEl.innerHTML=formatEl.innerHTML.replace(/<div class="bar-value">₹[^<]+<\/div>/g,(m,off,whole)=>m); // values are counts; replace labels below
-  if(formatEl){formatEl.innerHTML=Object.entries(formatMap).sort((a,b)=>b[1]-a[1]).map(([label,value])=>`<div class="bar-row"><div class="bar-label" title="${escText(label)}">${escText(label)}</div><div class="bar-track"><div class="bar-fill" style="width:${Math.max(2,(value/Math.max(...Object.values(formatMap),1))*100)}%"></div></div><div class="bar-value">${value}</div></div>`).join('')||'<div class="chart-empty">No tournaments in this period</div>';}
+
+  const expenseMap={
+    Registration:0,
+    Travel:0,
+    Food:0,
+    Accommodation:0,
+    Other:0
+  };
+
+  ts.forEach(t=>{
+    expenseMap.Registration+=Number(t.registration||0);
+    expenseMap.Travel+=Number(t.travel||0);
+    expenseMap.Food+=Number(t.food||0);
+    expenseMap.Accommodation+=Number(t.accommodation||0);
+    expenseMap.Other+=Number(t.other||0);
+  });
+
+  es.forEach(e=>{
+    const k=e.category||'Other';
+    expenseMap[k]=(expenseMap[k]||0)+Number(e.amount||0);
+  });
+
+  renderBars(
+    'expenseChart',
+    Object.entries(expenseMap)
+      .filter(([,v])=>v>0)
+      .sort((a,b)=>b[1]-a[1])
+      .map(([label,value])=>({label,value})),
+    'No expenses in this period'
+  );
+
+  const incomeMap={
+    'Other Income':0,
+    'Prize Money':0
+  };
+
+  is.forEach(e=>{
+    incomeMap['Other Income']+=Number(e.amount||0);
+  });
+
+  ts.forEach(t=>{
+    incomeMap['Prize Money']+=Number(t.prize||0);
+  });
+
+  renderBars(
+    'incomeChart',
+    Object.entries(incomeMap)
+      .sort((a,b)=>b[1]-a[1])
+      .map(([label,value])=>({label,value})),
+    'No income in this period'
+  );
+
+  const formatMap={};
+
+  ts.forEach(t=>{
+    const k=t.format||'Other';
+    formatMap[k]=(formatMap[k]||0)+1;
+  });
+
+  const formatEl=$('formatChart');
+
+  if(formatEl){
+    const entries=Object.entries(formatMap)
+      .sort((a,b)=>b[1]-a[1]);
+
+    const max=Math.max(...Object.values(formatMap),1);
+
+    formatEl.innerHTML=entries.length
+      ? entries.map(([label,value])=>`
+          <div class="bar-row">
+            <div class="bar-label" title="${escText(label)}">${escText(label)}</div>
+            <div class="bar-track">
+              <div class="bar-fill" style="width:${Math.max(2,(value/max)*100)}%"></div>
+            </div>
+            <div class="bar-value">${value}</div>
+          </div>
+        `).join('')
+      : '<div class="chart-empty">No tournaments in this period</div>';
+  }
 }
 function render(){
 let q=$('search').value.toLowerCase();let modeFilter=$('filterMode').value;let typeFilter=$('filterType').value;let formatFilter=$('filterFormat').value;let categoryFilter=$('filterCategory').value;let yearFilter=$('filterYear').value;let rows=data.filter(t=>(t.name+' '+t.location+' '+t.organizer+' '+(t.mode||'')+' '+(t.tournament_type||'')+' '+cat(t)+' '+t.format).toLowerCase().includes(q)&&(modeFilter==='all'||(t.mode||'Offline')===modeFilter)&&(typeFilter==='all'||(t.tournament_type||'Open')===typeFilter)&&(formatFilter==='all'||(t.format||'Classical')===formatFilter)&&(categoryFilter==='all'||(cat(t)||'Open')===categoryFilter)&&(yearFilter==='all'||yearOf(t.date)===yearFilter));
@@ -387,7 +465,7 @@ window.showTournament=id=>{
       ${item('Food',money(t.food))}
       ${item('Accommodation',money(t.accommodation))}
       ${item('Other Expense',money(t.other))}
-      ${item('Total Tournament Expense',money(expenseTotal(t)))}
+      ${item('Total Tournament Expenses',money(expenseTotal(t)))}
       ${item('Net Tournament Result',(net(t)>=0?'+':'-')+money(Math.abs(net(t))))}
     </div>
     ${t.notes?`<div class="detail-notes"><strong>Notes</strong><div>${esc(t.notes)}</div></div>`:''}
@@ -438,7 +516,7 @@ function calculateTPS(){
 }
 function openTournament(t){clearModalRequired();mode='tournament';edit=t||null;$('title').textContent=t?'Edit Tournament':'Add Tournament';$('tournamentFields').classList.remove('hidden');$('expenseFields').classList.add('hidden');$('incomeFields').classList.add('hidden');$('expenseDescription').required=false;$('expenseAmount').required=false;let fields={id:'id',name:'name',date:'date',location:'location',organizer:'organizer',mode:'mode',tournamentType:'tournament_type',ratingCategory:'rating_category',customCategory:'custom_category',format:'format',participants:'participants',rounds:'rounds',time:'time_control',rating:'rating',position:'position',score:'score',performance:'performance',prizeInput:'prize',registration:'registration',travel:'travel',food:'food',accommodation:'accommodation',other:'other',notes:'notes'};for(const [id,key] of Object.entries(fields))$(id).value=t?(t[key]??''):'';if(!t){$('date').value=today();$('tournamentType').value='Open';$('ratingCategory').value='Open';$('format').value='Classical';$('mode').value='Offline';['prizeInput','registration','travel','food','accommodation','other'].forEach(id=>$(id).value=0)}calc();$('modal').classList.remove('hidden')}
 function openIncome(e){clearModalRequired();mode='income';edit=e||null;$('title').textContent=e?'Edit Chess Income':'Add Chess Income';$('tournamentFields').classList.add('hidden');$('expenseFields').classList.add('hidden');$('incomeFields').classList.remove('hidden');$('expenseDescription').required=false;$('expenseAmount').required=false;$('incomeDescription').required=true;$('incomeAmount').required=true;$('incomeDate').value=e?.date||today();$('incomeCategory').value=e?.category||'Coaching / Training';$('incomeDescription').value=e?.description||'';$('incomeAmount').value=e?.amount??'';$('incomeNotes').value=e?.notes||'';$('modal').classList.remove('hidden')}
-function openExpense(e){clearModalRequired();mode='expense';edit=e||null;$('title').textContent=e?'Edit Chess Expense':'Add Chess Expense';$('tournamentFields').classList.add('hidden');$('expenseFields').classList.remove('hidden');$('incomeFields').classList.add('hidden');$('expenseDescription').required=true;$('expenseAmount').required=true;$('id').value=e?.id||'';$('expenseDate').value=e?.date||today();$('expenseCategory').value=e?.category||'Chess Books';$('expenseDescription').value=e?.description||'';$('expenseAmount').value=e?.amount??'';$('expenseNotes').value=e?.notes||'';$('modal').classList.remove('hidden')}
+function openExpense(e){clearModalRequired();mode='expense';edit=e||null;$('title').textContent=e?'Edit Other Expense':'Add Other Expense';$('tournamentFields').classList.add('hidden');$('expenseFields').classList.remove('hidden');$('incomeFields').classList.add('hidden');$('expenseDescription').required=true;$('expenseAmount').required=true;$('id').value=e?.id||'';$('expenseDate').value=e?.date||today();$('expenseCategory').value=e?.category||'Chess Books';$('expenseDescription').value=e?.description||'';$('expenseAmount').value=e?.amount??'';$('expenseNotes').value=e?.notes||'';$('modal').classList.remove('hidden')}
 function close(){$('modal').classList.add('hidden')}
 window.editT=id=>openTournament(data.find(t=>t.id===id));window.editE=id=>openExpense(expenses.find(e=>e.id===id));window.editI=id=>openIncome(incomes.find(e=>e.id===id));
 window.delT=async id=>{if(confirm('Delete this tournament?')){await db.execute('DELETE FROM tournaments WHERE id=?',[id]);await load()}};
@@ -476,7 +554,7 @@ async function backup(){
     alert('Could not create backup: '+err.message);
   }
 }
-$('backupBtn').onclick=backup;$('restoreBtn').onclick=()=>$('restoreFile').click();$('restoreFile').onchange=async()=>{const f=$('restoreFile').files[0];if(!f)return;try{const p=JSON.parse(await f.text());if(!Array.isArray(p.tournaments)||!Array.isArray(p.expenses))throw new Error('Invalid backup');if(!Array.isArray(p.incomes))p.incomes=[];if(!confirm('Restore backup? Existing data will be replaced.'))return;await db.execute('DELETE FROM tournaments');await db.execute('DELETE FROM chess_expenses');await db.execute('DELETE FROM chess_income');for(const t of p.tournaments){await db.execute(`INSERT INTO tournaments (id,name,date,location,organizer,tournament_type,rating_category,custom_category,format,participants,rounds,time_control,rating,position,score,performance,prize,registration,travel,food,accommodation,other,notes) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,[t.id||newId(),t.name||'',t.date||today(),t.location||'',t.organizer||'',t.tournament_type||t.tournamentType||'Open',t.rating_category||t.ratingCategory||'Open',t.custom_category||t.customCategory||'',t.format||'Classical',Number(t.participants||0),Number(t.rounds||0),t.time_control||t.time||'',Number(t.rating||0),Number(t.position||0),t.score||'',Number(t.performance||0),Number(t.prize||0),Number(t.registration||0),Number(t.travel||0),Number(t.food||0),Number(t.accommodation||0),Number(t.other||0),t.notes||''])}for(const x of p.expenses){await db.execute('INSERT INTO chess_expenses (id,date,category,description,amount,notes) VALUES (?,?,?,?,?,?)',[x.id||newId(),x.date||today(),x.category||'Other Chess Expense',x.description||'Expense',Number(x.amount||0),x.notes||''])}for(const x of p.incomes){await db.execute('INSERT INTO chess_income (id,date,category,description,amount,notes) VALUES (?,?,?,?,?,?)',[x.id||newId(),x.date||today(),x.category||'Other Chess Income',x.description||'Income',Number(x.amount||0),x.notes||''])}await load();alert('Backup restored successfully.')}catch(err){alert('Could not restore backup: '+err.message)}$('restoreFile').value=''};
+$('backupBtn').onclick=backup;$('restoreBtn').onclick=()=>$('restoreFile').click();$('restoreFile').onchange=async()=>{const f=$('restoreFile').files[0];if(!f)return;try{const p=JSON.parse(await f.text());if(!Array.isArray(p.tournaments)||!Array.isArray(p.expenses))throw new Error('Invalid backup');if(!Array.isArray(p.incomes))p.incomes=[];if(!confirm('Restore backup? Existing data will be replaced.'))return;await db.execute('DELETE FROM tournaments');await db.execute('DELETE FROM chess_expenses');await db.execute('DELETE FROM chess_income');for(const t of p.tournaments){await db.execute(`INSERT INTO tournaments (id,name,date,location,organizer,tournament_type,rating_category,custom_category,format,participants,rounds,time_control,rating,position,score,performance,prize,registration,travel,food,accommodation,other,notes) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,[t.id||newId(),t.name||'',t.date||today(),t.location||'',t.organizer||'',t.tournament_type||t.tournamentType||'Open',t.rating_category||t.ratingCategory||'Open',t.custom_category||t.customCategory||'',t.format||'Classical',Number(t.participants||0),Number(t.rounds||0),t.time_control||t.time||'',Number(t.rating||0),Number(t.position||0),t.score||'',Number(t.performance||0),Number(t.prize||0),Number(t.registration||0),Number(t.travel||0),Number(t.food||0),Number(t.accommodation||0),Number(t.other||0),t.notes||''])}for(const x of p.expenses){await db.execute('INSERT INTO chess_expenses (id,date,category,description,amount,notes) VALUES (?,?,?,?,?,?)',[x.id||newId(),x.date||today(),x.category||'Other Expense',x.description||'Expense',Number(x.amount||0),x.notes||''])}for(const x of p.incomes){await db.execute('INSERT INTO chess_income (id,date,category,description,amount,notes) VALUES (?,?,?,?,?,?)',[x.id||newId(),x.date||today(),x.category||'Other Chess Income',x.description||'Income',Number(x.amount||0),x.notes||''])}await load();alert('Backup restored successfully.')}catch(err){alert('Could not restore backup: '+err.message)}$('restoreFile').value=''};
 init().catch(err=>{console.error(err);document.body.insertAdjacentHTML('afterbegin','<div style="padding:12px;background:#fee;color:#900">Database could not be opened. Please run the Tauri app, not index.html directly.</div>')});
 ['participants','rounds','position','score'].forEach(id=>{
   $(id).addEventListener('input',calculateTPS);
