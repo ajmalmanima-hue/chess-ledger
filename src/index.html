@@ -58,7 +58,18 @@
   <option value="all">All Modes</option>
   <option value="Offline">Offline</option>
   <option value="Online">Online</option>
-</select> </div></div><div id="empty">No tournaments yet. Add your first tournament.</div><div id="list"></div></section>
+</select><select id="filterType">
+  <option value="all">All Types</option>
+  <option value="Open">Open</option>
+  <option value="Rated">Rated</option>
+  <option value="Unrated">Unrated</option>
+  <option value="Team">Team</option>
+  <option value="Junior">Junior</option>
+  <option value="Women's">Women's</option>
+  <option value="Club">Club</option>
+  <option value="School/College">School/College</option>
+  <option value="Other">Other</option>
+</select>  </div></div><div id="empty">No tournaments yet. Add your first tournament.</div><div id="list"></div></section>
 <section id="expenseSection" class="panel hidden"><div class="head"><h2>Chess Expenses</h2><input id="expenseSearch" placeholder="Search expenses..."></div><div id="expenseEmpty">No chess expenses yet.</div><div id="expenseList"></div></section><section id="incomeSection" class="panel hidden"><div class="head"><h2>Chess Income</h2><input id="incomeSearch" placeholder="Search income..."></div><div id="incomeEmpty">No Other income yet.</div><div id="incomeList"></div></section>
 </main>
 <div id="detailsModal" class="modal hidden"><div class="dialog"><div class="head"><h2>🏆 Tournament Details</h2><button type="button" id="detailsClose">×</button></div><div id="detailsContent"></div><div class="actions"><button type="button" id="detailsEdit" class="primary">Edit</button><button type="button" id="detailsCloseBottom">Close</button></div></div></div>

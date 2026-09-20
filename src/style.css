@@ -139,3 +139,21 @@
 .performance-line{stroke:#2563eb;stroke-width:3;fill:none}
 .performance-point{fill:#2563eb;stroke:#fff;stroke-width:2}
 .performance-value{font-size:12px;font-weight:700;fill:#1f2937}
+/* Compact tournament filters */
+.tournament-tools input,
+.tournament-tools select{
+  width:auto;
+  margin-top:0;
+  height:40px;
+  padding:8px 12px;
+}
+
+.tournament-tools input[type="text"]{
+  min-width:220px;
+  flex:1;
+}
+
+.tournament-tools select{
+  min-width:130px;
+  flex:0 0 auto;
+}
