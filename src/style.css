@@ -157,3 +157,146 @@
   min-width:130px;
   flex:0 0 auto;
 }
+/* One-row tournament filter toolbar */
+.tournament-tools{
+  flex-wrap:nowrap;
+  gap:8px;
+  width:100%;
+}
+
+.tournament-tools input[type="text"]{
+  width:200px;
+  min-width:180px;
+  flex:1;
+}
+
+.tournament-tools select{
+  min-width:0;
+  width:auto;
+  flex:0 0 auto;
+}
+
+#filterMode{
+  width:110px;
+}
+
+#filterType{
+  width:110px;
+}
+
+#filterFormat{
+  width:105px;
+}
+
+#filterCategory{
+  width:135px;
+}
+
+#filterYear{
+  width:100px;
+}
+
+@media(max-width:1050px){
+  .tournament-tools{
+    flex-wrap:wrap;
+  }
+}
+#filterFormat{
+  width:120px;
+}
+
+#clearFiltersBtn{
+  white-space:nowrap;
+  height:40px;
+  padding:8px 12px;
+}
+/* Final compact filter widths */
+.tournament-tools input[type="text"]{
+  width:185px;
+  min-width:170px;
+  flex:0 0 185px;
+}
+
+#filterMode{
+  width:105px;
+}
+
+#filterType{
+  width:105px;
+}
+
+#filterFormat{
+  width:130px;
+}
+
+#filterCategory{
+  width:140px;
+}
+
+#filterYear{
+  width:105px;
+}
+
+#clearFiltersBtn{
+  width:110px;
+  padding:8px 10px;
+}
+/* Two-row tournament controls */
+.tournament-head{
+  align-items:flex-start;
+}
+
+.tournament-controls{
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  min-width:0;
+}
+
+.filter-row,
+.action-row{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  width:100%;
+}
+
+.filter-row select{
+  flex:1;
+  min-width:0;
+  width:auto;
+  margin-top:0;
+}
+
+.action-row .view-switch{
+  flex:0 0 auto;
+}
+
+.action-row input{
+  flex:1;
+  min-width:180px;
+  margin-top:0;
+}
+
+#clearFiltersBtn{
+  flex:0 0 auto;
+  white-space:nowrap;
+  height:40px;
+}
+
+@media(max-width:800px){
+  .filter-row,
+  .action-row{
+    flex-wrap:wrap;
+  }
+
+  .filter-row select{
+    flex:1 1 140px;
+  }
+
+  .action-row input{
+    flex:1 1 200px;
+  }
+}
+
