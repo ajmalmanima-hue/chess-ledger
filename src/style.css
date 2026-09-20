@@ -300,3 +300,33 @@
   }
 }
 
+/* Enhanced tournament details */
+.detail-grid{
+  gap:12px;
+}
+
+.detail-item{
+  padding:13px 14px;
+  background:#f7f9fc;
+  border:1px solid #e6eaf0;
+  border-radius:9px;
+}
+
+.detail-item span{
+  font-size:12px;
+  color:#667085;
+  margin-bottom:5px;
+}
+
+.detail-item b{
+  font-size:14px;
+}
+
+.detail-notes{
+  margin-top:16px;
+  padding:14px;
+  background:#f7f9fc;
+  border:1px solid #e6eaf0;
+  border-radius:9px;
+  line-height:1.5;
+}
