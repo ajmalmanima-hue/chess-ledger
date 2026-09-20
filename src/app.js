@@ -44,11 +44,11 @@ function filteredDash(){
   if(dashYear==='all') return {ts:data,es:expenses,is:incomes};
   return {ts:data.filter(t=>yearOf(t.date)===dashYear),es:expenses.filter(e=>yearOf(e.date)===dashYear),is:incomes.filter(e=>yearOf(e.date)===dashYear)};
 }
-function renderBars(id, items, empty='No data'){
+function renderBars(id, items, empty='No data', plainNumber=false){
   const el=$(id); if(!el)return;
   if(!items.length){el.innerHTML=`<div class="chart-empty">${empty}</div>`;return;}
   const max=Math.max(...items.map(x=>x.value),1);
-  el.innerHTML=items.map(x=>`<div class="bar-row"><div class="bar-label" title="${escText(x.label)}">${escText(x.label)}</div><div class="bar-track"><div class="bar-fill" style="width:${Math.max(2,(x.value/max)*100)}%"></div></div><div class="bar-value">${money(x.value)}</div></div>`).join('');
+  el.innerHTML=items.map(x=>`<div class="bar-row"><div class="bar-label" title="${escText(x.label)}">${escText(x.label)}</div><div class="bar-track"><div class="bar-fill" style="width:${Math.max(2,(x.value/max)*100)}%"></div></div><div class="bar-value">${plainNumber?Number(x.value).toFixed(1):money(x.value)}</div></div>`).join('');
 }
 function renderPerformanceTrend(items){
   const el=$('performanceTrend');
@@ -219,11 +219,12 @@ function renderPerformance(){
     }))
     .sort((a,b)=>b.value-a.value);
 
-  renderBars(
-    'performanceFormat',
-    formatData,
-    'No performance data'
-  );
+renderBars(
+  'performanceFormat',
+  formatData,
+  'No performance data',
+  true
+);
 
   const categoryMap={};
   performanceRows.forEach(t=>{
@@ -239,11 +240,12 @@ function renderPerformance(){
     }))
     .sort((a,b)=>b.value-a.value);
 
-  renderBars(
-    'performanceCategory',
-    categoryData,
-    'No performance data'
-  );
+renderBars(
+  'performanceCategory',
+  categoryData,
+  'No performance data',
+  true
+);
 
   const modeMap={};
   performanceRows.forEach(t=>{
@@ -259,11 +261,12 @@ function renderPerformance(){
     }))
     .sort((a,b)=>b.value-a.value);
 
-  renderBars(
-    'performanceMode',
-    modeData,
-    'No performance data'
-  );
+renderBars(
+  'performanceMode',
+  modeData,
+  'No performance data',
+  true
+);
 
   const costData=performanceRows
     .map(t=>{
@@ -284,11 +287,12 @@ function renderPerformance(){
     .filter(Boolean)
     .sort((a,b)=>b.value-a.value);
 
-  renderBars(
-    'performanceCost',
-    costData,
-    'No cost data available'
-  );
+renderBars(
+  'performanceCost',
+  costData,
+  'No cost data available',
+  true
+);
 
   const trendData=performanceRows
     .slice()
@@ -320,7 +324,9 @@ function renderDashboard(){
   ts.forEach(t=>{expenseMap.Registration+=Number(t.registration||0);expenseMap.Travel+=Number(t.travel||0);expenseMap.Food+=Number(t.food||0);expenseMap.Accommodation+=Number(t.accommodation||0);expenseMap.Other+=Number(t.other||0)});
   es.forEach(e=>{const k=e.category||'Other';expenseMap[k]=(expenseMap[k]||0)+Number(e.amount||0)});
   renderBars('expenseChart',Object.entries(expenseMap).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]).map(([label,value])=>({label,value})),'No expenses in this period');
-  const incomeMap={}; is.forEach(e=>{const k=e.category||'Other Income';incomeMap[k]=(incomeMap[k]||0)+Number(e.amount||0)}); ts.forEach(t=>{const v=Number(t.prize||0);if(v)incomeMap['Prize Money']=(incomeMap['Prize Money']||0)+v});
+  const incomeMap={'Other Income':0,'Prize Money':0};
+is.forEach(e=>{incomeMap['Other Income']+=Number(e.amount||0)});
+ts.forEach(t=>{incomeMap['Prize Money']+=Number(t.prize||0)});
   renderBars('incomeChart',Object.entries(incomeMap).sort((a,b)=>b[1]-a[1]).map(([label,value])=>({label,value})),'No income in this period');
   const formatMap={}; ts.forEach(t=>{const k=t.format||'Other';formatMap[k]=(formatMap[k]||0)+1});
   renderBars('formatChart',Object.entries(formatMap).sort((a,b)=>b[1]-a[1]).map(([label,value])=>({label,value})).map(x=>({...x,displayCount:true})),'No tournaments in this period');
