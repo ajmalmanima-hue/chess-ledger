@@ -54,7 +54,11 @@
   </div>
 </div>
 </section>
-<section id="tournamentSection" class="panel hidden"><div class="head"><h2>Tournaments</h2><div class="tournament-tools"><div class="view-switch"><button type="button" id="cardViewBtn" class="view-btn active">▦ Card</button><button type="button" id="listViewBtn" class="view-btn">☷ List</button></div><input id="search" placeholder="Search tournaments..."></div></div><div id="empty">No tournaments yet. Add your first tournament.</div><div id="list"></div></section>
+<section id="tournamentSection" class="panel hidden"><div class="head"><h2>Tournaments</h2><div class="tournament-tools"><div class="view-switch"><button type="button" id="cardViewBtn" class="view-btn active">▦ Card</button><button type="button" id="listViewBtn" class="view-btn">☷ List</button></div><input id="search" placeholder="Search tournaments..."><select id="filterMode">
+  <option value="all">All Modes</option>
+  <option value="Offline">Offline</option>
+  <option value="Online">Online</option>
+</select> </div></div><div id="empty">No tournaments yet. Add your first tournament.</div><div id="list"></div></section>
 <section id="expenseSection" class="panel hidden"><div class="head"><h2>Chess Expenses</h2><input id="expenseSearch" placeholder="Search expenses..."></div><div id="expenseEmpty">No chess expenses yet.</div><div id="expenseList"></div></section><section id="incomeSection" class="panel hidden"><div class="head"><h2>Chess Income</h2><input id="incomeSearch" placeholder="Search income..."></div><div id="incomeEmpty">No Other income yet.</div><div id="incomeList"></div></section>
 </main>
 <div id="detailsModal" class="modal hidden"><div class="dialog"><div class="head"><h2>🏆 Tournament Details</h2><button type="button" id="detailsClose">×</button></div><div id="detailsContent"></div><div class="actions"><button type="button" id="detailsEdit" class="primary">Edit</button><button type="button" id="detailsCloseBottom">Close</button></div></div></div>
