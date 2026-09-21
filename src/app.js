@@ -1,6 +1,7 @@
 import Database from '@tauri-apps/plugin-sql';
 import { save, confirm as dialogConfirm } from '@tauri-apps/plugin-dialog';
 import { writeTextFile } from '@tauri-apps/plugin-fs';
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from './config.js';
 
 let db;
 let data=[];
@@ -56,6 +57,37 @@ const money=n=>{
 };
 const today=()=>new Date().toISOString().slice(0,10);
 const newId=()=>crypto.randomUUID();
+
+async function recordUsage(){
+  try{
+    await fetch(`${SUPABASE_URL}/rest/v1/rpc/record_usage`,{
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json',
+        'apikey':SUPABASE_ANON_KEY,
+        'Authorization':`Bearer ${SUPABASE_ANON_KEY}`
+      },
+      body:JSON.stringify({
+        p_installation_id:installationId,
+        p_platform:navigator.userAgent.includes('Windows')?'Windows':
+          navigator.userAgent.includes('Linux')?'Linux':'Other',
+        p_app_version:'0.2.0'
+      })
+    });
+  }catch(err){
+    console.warn('Usage statistics unavailable:',err);
+  }
+}
+
+
+const installationId=
+  localStorage.getItem('chessLedgerInstallationId')||
+  crypto.randomUUID();
+
+localStorage.setItem(
+  'chessLedgerInstallationId',
+  installationId
+);
 const expenseTotal=t=>['registration','travel','food','accommodation','other'].reduce((s,k)=>s+Number(t[k]||0),0);
 const net=t=>Number(t.prize||0)-expenseTotal(t);
 function esc(x){return String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]))}
@@ -1384,7 +1416,9 @@ $('restoreFile').onchange=async()=>{
 };
 
 setupCurrency();
-init().catch(err=>{console.error(err);document.body.insertAdjacentHTML('afterbegin','<div style="padding:12px;background:#fee;color:#900">Database could not be opened. Please run the Tauri app, not index.html directly.</div>')});
+init().then(()=>{
+  recordUsage();
+}).catch(err=>{console.error(err);document.body.insertAdjacentHTML('afterbegin','<div style="padding:12px;background:#fee;color:#900">Database could not be opened. Please run the Tauri app, not index.html directly.</div>')});
 ['participants','rounds','position','score'].forEach(id=>{
   $(id).addEventListener('input',calculateTPS);
 });
