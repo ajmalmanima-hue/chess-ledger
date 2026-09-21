@@ -1,5 +1,5 @@
 import Database from '@tauri-apps/plugin-sql';
-import { save } from '@tauri-apps/plugin-dialog';
+import { save, confirm as dialogConfirm } from '@tauri-apps/plugin-dialog';
 import { writeTextFile } from '@tauri-apps/plugin-fs';
 
 let db;
@@ -1217,20 +1217,29 @@ $('settingsBackupBtn').onclick=backup;
 $('settingsRestoreBtn').onclick=()=>$('restoreFile').click();
 
 $('settingsClearBtn').onclick=async()=>{
-  const first=confirm(
-    '⚠️ Clear All Data?\\n\\n' +
-    'This will permanently delete all tournaments, other expenses, other income and calendar events.\\n\\n' +
-    'This action cannot be undone.'
+  const first=await dialogConfirm(
+    'This will permanently delete all tournaments, other expenses, other income and calendar events.\n\nThis action cannot be undone.',
+    {
+      title:'⚠️ Clear All Data?',
+      kind:'warning'
+    }
   );
 
-  if(!first)return;
+  if(!first){
+    return;
+  }
 
-  const second=confirm(
-    'Are you absolutely sure?\\n\\n' +
-    'All Chess Ledger records will be permanently deleted.'
+  const second=await dialogConfirm(
+    'All Chess Ledger records will be permanently deleted.',
+    {
+      title:'Are you absolutely sure?',
+      kind:'warning'
+    }
   );
 
-  if(!second)return;
+  if(!second){
+    return;
+  }
 
   try{
     await db.execute('DELETE FROM tournaments');
