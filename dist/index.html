@@ -1,14 +1,17 @@
-<!doctype html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Chess Ledger</title>  <script type="module" crossorigin src="/assets/index-BE92CE26.js"></script>
-  <link rel="stylesheet" crossorigin href="/assets/index-CanKJs4a.css">
+<!doctype html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Chess Ledger</title>  <script type="module" crossorigin src="/assets/index-CAw3PWHW.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index-B5fLORVJ.css">
 </head><body>
-<header><div><h1>♟ Chess Ledger</h1><p>Tournaments & other expenses</p></div><div class="header-actions"><button id="backupBtn">Backup</button><button id="restoreBtn">Restore</button><input id="restoreFile" type="file" accept="application/json" hidden><button id="addIncomeBtn">+ Other Income</button><button id="addExpenseBtn">+ Other Expense</button><button id="addBtn" class="primary">+ Tournament</button></div></header>
+<header><div><h1>♟ Chess Ledger</h1><p>Tournaments & other expenses</p></div><div class="header-actions"><input id="restoreFile" type="file" accept="application/json" hidden><button id="addIncomeBtn">+ Other Income</button><button id="addExpenseBtn">+ Other Expense</button><button id="addBtn" class="primary">+ Tournament</button></div></header>
 <main>
 <section class="stats dashboard-summary"> <div><span>Tournaments</span><b id="count">0</b></div><div><span>Tournament Expenses</span><b id="expense">₹0</b></div><div><span>Other Expenses</span><b id="chessExpense">₹0</b></div><div><span>Prize Money</span><b id="prize">₹0</b></div><div><span>Other Income</span><b id="otherIncome">₹0</b></div><div><span>Total Income</span><b id="totalIncome">₹0</b></div><div><span>Overall Expense</span><b id="overall">₹0</b></div><div class="net-result-card">
   <span>NET RESULT</span>
   <b id="netOverall">₹0</b>
 </div> </section>
-<section class="tabs"><button class="tab active" data-tab="dashboard">📊 Dashboard</button><button class="tab" data-tab="performance">📈 Performance</button><button class="tab" data-tab="tournaments">🏆 Tournaments</button><button class="tab" data-tab="expenses">💰 Other Expenses</button><button class="tab" data-tab="income">💵 Other Income</button><button class="tab" data-tab="calendar">📅 Calendar</button> </section>
-<section id="dashboardSection" class="panel dashboard-panel"><div class="head"><div><h2>Dashboard</h2><div class="meta">Your chess finances and tournament activity</div></div><select id="dashYear"><option value="all">All Years</option></select></div><div class="dash-grid"><div class="chart-card"><h3>Monthly income vs expense</h3><div class="chart-wrap"><svg id="monthlyChart" viewBox="0 0 760 280" role="img" aria-label="Monthly income and expense chart"></svg></div></div><div class="chart-card"><h3>Expenses by category</h3><div id="expenseChart" class="bar-chart"></div></div><div class="chart-card"><h3>Income by source</h3><div id="incomeChart" class="bar-chart"></div></div><div class="chart-card"><h3>Tournaments by format</h3><div id="formatChart" class="bar-chart"></div></div></div></section>
+<section class="tabs"><button class="tab active" data-tab="dashboard">📊 Dashboard</button><button class="tab" data-tab="performance">📈 Performance</button><button class="tab" data-tab="tournaments">🏆 Tournaments</button><button class="tab" data-tab="expenses">💰 Other Expenses</button><button class="tab" data-tab="income">💵 Other Income</button><button class="tab" data-tab="calendar">📅 Calendar</button><button class="tab" data-tab="settings">⚙️ Settings</button> </section>
+<section id="dashboardSection" class="panel dashboard-panel"><div class="head"><div><h2>Dashboard</h2><div class="meta">Your chess finances and tournament activity</div></div><select id="dashYear"><option value="all">All Years</option></select></div><div class="dash-grid"><div class="chart-card"><h3>Monthly income vs expense</h3><div class="chart-wrap"><svg id="monthlyChart" viewBox="0 0 760 280" role="img" aria-label="Monthly income and expense chart"></svg></div></div><div class="chart-card"><h3>Expenses by category</h3>
+
+
+<div id="expenseChart" class="bar-chart"></div></div><div class="chart-card"><h3>Income by source</h3><div id="incomeChart" class="bar-chart"></div></div><div class="chart-card"><h3>Tournaments by format</h3><div id="formatChart" class="bar-chart"></div></div></div></section>
 <section id="performanceSection" class="panel hidden">
 <div class="head">
   <div>
@@ -226,6 +229,33 @@
 </section>
 </main>
 <div id="detailsModal" class="modal hidden"><div class="dialog"><div class="head"><h2>🏆 Tournament Details</h2><button type="button" id="detailsClose">×</button></div><div id="detailsContent"></div><div class="actions"><button type="button" id="detailsEdit" class="primary">Edit</button><button type="button" id="detailsCloseBottom">Close</button></div></div></div>
+
+<section id="settingsSection" class="panel hidden">
+  <div class="head">
+    <div>
+      <h2>⚙️ Settings</h2>
+      <div class="meta">Customize Chess Ledger and manage your data</div>
+    </div>
+  </div>
+
+  <div class="settings-card">
+    <h3>🌍 General</h3>
+    <label>
+      Currency
+      <select id="currencySelect"></select>
+    </label>
+  </div>
+
+  <div class="settings-card">
+    <h3>💾 Data Management</h3>
+    <div class="settings-actions">
+      <button type="button" id="settingsBackupBtn">💾 Backup Data</button>
+      <button type="button" id="settingsRestoreBtn">♻️ Restore Data</button>
+      <button type="button" id="settingsClearBtn" class="danger">🗑️ Clear All Data</button>
+    </div>
+  </div>
+</section>
+
 <div id="eventModal" class="modal hidden">
   <div class="dialog">
     <div class="head">

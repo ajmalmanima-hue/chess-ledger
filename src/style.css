@@ -526,3 +526,57 @@
   }
 }
 
+
+.settings-card{
+  background:#fff;
+  border:1px solid #e1e6ee;
+  border-radius:12px;
+  padding:20px;
+  margin-top:16px;
+}
+
+.settings-card h3{
+  margin:0 0 16px;
+  font-size:18px;
+}
+
+.settings-card label{
+  display:flex;
+  flex-direction:column;
+  gap:7px;
+  max-width:420px;
+  font-weight:600;
+}
+
+.settings-card select{
+  padding:10px 12px;
+  border:1px solid #d5dce7;
+  border-radius:8px;
+  background:#fff;
+  font:inherit;
+}
+
+.settings-actions{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+}
+
+.settings-actions button{
+  padding:10px 14px;
+}
+
+.settings-actions .danger{
+  border-color:#ef4444;
+  color:#b91c1c;
+}
+
+@media(max-width:600px){
+  .settings-actions{
+    flex-direction:column;
+  }
+
+  .settings-actions button{
+    width:100%;
+  }
+}

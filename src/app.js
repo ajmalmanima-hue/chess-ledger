@@ -12,7 +12,48 @@ let edit=null;
 let mode='tournament';
 let dashYear='all';
 const $=x=>document.getElementById(x);
-const money=n=>'₹'+Number(n||0).toLocaleString('en-IN',{maximumFractionDigits:2});
+const currencyOptions={
+  INR:{name:'Indian Rupee',symbol:'₹',locale:'en-IN'},
+  USD:{name:'US Dollar',symbol:'$',locale:'en-US'},
+  EUR:{name:'Euro',symbol:'€',locale:'de-DE'},
+  GBP:{name:'British Pound',symbol:'£',locale:'en-GB'},
+  AED:{name:'UAE Dirham',symbol:'د.إ',locale:'en-AE'},
+  SAR:{name:'Saudi Riyal',symbol:'﷼',locale:'en-SA'},
+  JPY:{name:'Japanese Yen',symbol:'¥',locale:'ja-JP'},
+  CAD:{name:'Canadian Dollar',symbol:'CA$',locale:'en-CA'},
+  AUD:{name:'Australian Dollar',symbol:'A$',locale:'en-AU'},
+  CHF:{name:'Swiss Franc',symbol:'CHF',locale:'de-CH'}
+};
+
+let selectedCurrency=localStorage.getItem('chessLedgerCurrency')||'INR';
+
+function setupCurrency(){
+  const select=$('currencySelect');
+  if(!select)return;
+
+  select.innerHTML=Object.entries(currencyOptions)
+    .map(([code,c])=>`<option value="${code}">${c.name} (${c.symbol})</option>`)
+    .join('');
+
+  select.value=currencyOptions[selectedCurrency]
+    ? selectedCurrency
+    : 'INR';
+
+  selectedCurrency=select.value;
+
+  select.onchange=()=>{
+    selectedCurrency=select.value;
+    localStorage.setItem('chessLedgerCurrency',selectedCurrency);
+    render();
+  };
+}
+
+const money=n=>{
+  const c=currencyOptions[selectedCurrency]||currencyOptions.INR;
+  return c.symbol+Number(n||0).toLocaleString(c.locale,{
+    maximumFractionDigits:2
+  });
+};
 const today=()=>new Date().toISOString().slice(0,10);
 const newId=()=>crypto.randomUUID();
 const expenseTotal=t=>['registration','travel','food','accommodation','other'].reduce((s,k)=>s+Number(t[k]||0),0);
@@ -43,7 +84,7 @@ async function init(){
 `);
 await load();
 }
-async function load(){data=await db.select('SELECT * FROM tournaments ORDER BY date DESC, created_at DESC');expenses=await db.select('SELECT * FROM chess_expenses ORDER BY date DESC, created_at DESC');incomes=await db.select('SELECT * FROM chess_income ORDER BY date DESC, created_at DESC');events=await db.select('SELECT * FROM events ORDER BY date ASC, created_at ASC');buildPerformanceYearFilter();render()}
+async function load(){data=await db.select('SELECT * FROM tournaments ORDER BY date DESC, created_at DESC');expenses=await db.select('SELECT * FROM chess_expenses ORDER BY date DESC, created_at DESC');incomes=await db.select('SELECT * FROM chess_income ORDER BY date DESC, created_at DESC');events=await db.select('SELECT * FROM events ORDER BY date ASC, created_at ASC');buildPerformanceYearFilter();render();checkEventReminders()}
 function yearOf(date){return String(date||'').slice(0,4)}
 function escText(x){return esc(x)}
 function buildYearFilter(){
@@ -136,7 +177,7 @@ function renderMonthlyChart(ts,es,is){
   const expenseBy=months.map(m=>es.filter(x=>Number(String(x.date||'').slice(5,7))-1===m).reduce((s,x)=>s+Number(x.amount||0),0));
   ts.forEach(t=>{const m=Number(String(t.date||'').slice(5,7))-1;if(m>=0)expenseBy[m]+=expenseTotal(t);});
   const max=Math.max(...incomeBy,...expenseBy,1), W=760,H=280,left=52,right=18,top=24,bottom=42,plotW=W-left-right,plotH=H-top-bottom,step=plotW/12,barW=Math.min(18,step*.28);
-  const grid=[]; for(let i=0;i<=4;i++){const y=top+plotH-(plotH*i/4),v=max*i/4;grid.push(`<line x1="${left}" y1="${y}" x2="${W-right}" y2="${y}" class="gridline"/><text x="${left-8}" y="${y+4}" text-anchor="end" class="axis-text">${money(v).replace('₹','₹')}</text>`)}
+  const grid=[]; for(let i=0;i<=4;i++){const y=top+plotH-(plotH*i/4),v=max*i/4;grid.push(`<line x1="${left}" y1="${y}" x2="${W-right}" y2="${y}" class="gridline"/><text x="${left-8}" y="${y+4}" text-anchor="end" class="axis-text">${money(v)}</text>`)}
   const bars=[]; const labels=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   months.forEach(i=>{const x=left+i*step+step/2; const ih=(incomeBy[i]/max)*plotH,eh=(expenseBy[i]/max)*plotH;bars.push(`<rect x="${x-barW-2}" y="${top+plotH-ih}" width="${barW}" height="${ih}" class="income-bar"><title>${labels[i]} income: ${money(incomeBy[i])}</title></rect><rect x="${x+2}" y="${top+plotH-eh}" width="${barW}" height="${eh}" class="expense-bar"><title>${labels[i]} expense: ${money(expenseBy[i])}</title></rect><text x="${x}" y="${H-14}" text-anchor="middle" class="axis-text">${labels[i]}</text>`)});
   svg.innerHTML=grid.join('')+bars.join('')+`<line x1="${left}" y1="${top+plotH}" x2="${W-right}" y2="${top+plotH}" class="axis-line"/><g transform="translate(${W-170},8)"><rect width="12" height="12" class="income-bar"/><text x="18" y="10" class="axis-text">Income</text><rect x="75" width="12" height="12" class="expense-bar"/><text x="93" y="10" class="axis-text">Expense</text></g>`;
@@ -922,6 +963,38 @@ $('eventForm').onsubmit=async e=>{
 
 
 
+
+function checkEventReminders(){
+  const todayDate=today();
+
+  const reminders=events.filter(e=>{
+    if(Number(e.reminder)<0)return false;
+    if(!e.date)return false;
+
+    const eventDate=new Date(e.date+'T00:00:00');
+    const todayObj=new Date(todayDate+'T00:00:00');
+    const diff=Math.round((eventDate-todayObj)/(1000*60*60*24));
+
+    return diff===Number(e.reminder);
+  });
+
+  if(!reminders.length)return;
+
+  const message=reminders.map(e=>{
+    const diff=Number(e.reminder);
+    const when=diff===0
+      ? 'today'
+      : diff===1
+        ? 'tomorrow'
+        : `in ${diff} days`;
+
+    return `📅 ${e.name} — ${e.date} (${when})`;
+  }).join('\n');
+
+  alert(`Upcoming Chess Events\n\n${message}`);
+}
+
+
 function render(){
 let q=$('search').value.toLowerCase();let modeFilter=$('filterMode').value;let typeFilter=$('filterType').value;let formatFilter=$('filterFormat').value;let categoryFilter=$('filterCategory').value;let yearFilter=$('filterYear').value;let rows=data.filter(t=>(t.name+' '+t.location+' '+t.organizer+' '+(t.mode||'')+' '+(t.tournament_type||'')+' '+cat(t)+' '+t.format).toLowerCase().includes(q)&&(modeFilter==='all'||(t.mode||'Offline')===modeFilter)&&(typeFilter==='all'||(t.tournament_type||'Open')===typeFilter)&&(formatFilter==='all'||(t.format||'Classical')===formatFilter)&&(categoryFilter==='all'||(cat(t)||'Open')===categoryFilter)&&(yearFilter==='all'||yearOf(t.date)===yearFilter));
  $('count').textContent=data.length;const te=data.reduce((s,t)=>s+expenseTotal(t),0),ce=expenses.reduce((s,e)=>s+Number(e.amount||0),0),pr=data.reduce((s,t)=>s+Number(t.prize||0),0),inc=incomes.reduce((s,e)=>s+Number(e.amount||0),0),oe=te+ce,totalIncome=pr+inc; $('expense').textContent=money(te);$('chessExpense').textContent=money(ce);$('prize').textContent=money(pr);$('overall').textContent=money(oe);$('otherIncome').textContent=money(inc);$('totalIncome').textContent=money(totalIncome);$('netOverall').textContent=(totalIncome-oe>=0?'+':'-')+money(Math.abs(totalIncome-oe));$('netOverall').className=totalIncome-oe>=0?'positive':'negative';
@@ -1087,7 +1160,7 @@ $('incomeListViewBtn').onclick=()=>{
   render();
 };
 ['registration','travel','food','accommodation','other','prizeInput'].forEach(id=>$(id).oninput=calc);
-document.querySelectorAll('.tab').forEach(btn=>btn.onclick=()=>{document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));btn.classList.add('active');let tab=btn.dataset.tab;$('dashboardSection').classList.toggle('hidden',tab!=='dashboard');$('tournamentSection').classList.toggle('hidden',tab!=='tournaments');$('expenseSection').classList.toggle('hidden',tab!=='expenses');$('incomeSection').classList.toggle('hidden',tab!=='income');$('performanceSection').classList.toggle('hidden',tab!=='performance');$('calendarSection').classList.toggle('hidden',tab!=='calendar');if(tab==='dashboard')renderDashboard();if(tab==='performance')renderPerformance();if(tab==='calendar')renderCalendar()});
+document.querySelectorAll('.tab').forEach(btn=>btn.onclick=()=>{document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));btn.classList.add('active');let tab=btn.dataset.tab;$('dashboardSection').classList.toggle('hidden',tab!=='dashboard');$('tournamentSection').classList.toggle('hidden',tab!=='tournaments');$('expenseSection').classList.toggle('hidden',tab!=='expenses');$('incomeSection').classList.toggle('hidden',tab!=='income');$('performanceSection').classList.toggle('hidden',tab!=='performance');$('calendarSection').classList.toggle('hidden',tab!=='calendar');$('settingsSection').classList.toggle('hidden',tab!=='settings');if(tab==='dashboard')renderDashboard();if(tab==='performance')renderPerformance();if(tab==='calendar')renderCalendar()});
 $('dashYear').onchange=()=>{dashYear=$('dashYear').value;renderDashboard()};
 
 $('performanceYear').onchange=()=>renderPerformance();
@@ -1116,19 +1189,192 @@ renderCalendar();
 }catch(err){console.error(err);alert('Could not save. '+err)} };
 async function backup(){
   try{
-    const payload={version:4,exportedAt:new Date().toISOString(),tournaments:data,expenses,incomes};
+    const payload={
+      version:5,
+      exportedAt:new Date().toISOString(),
+      tournaments:data,
+      expenses,
+      incomes,
+      events
+    };
+
     const path=await save({
       defaultPath:'chess-ledger-backup.json',
       filters:[{name:'Chess Ledger Backup',extensions:['json']}]
     });
+
     if(!path)return;
+
     await writeTextFile(path,JSON.stringify(payload,null,2));
     alert('Backup saved successfully.');
   }catch(err){
-    alert('Could not create backup: '+err.message);
+    console.error(err);
+    alert('Could not create backup: '+(err?.message||String(err)));
   }
 }
-$('backupBtn').onclick=backup;$('restoreBtn').onclick=()=>$('restoreFile').click();$('restoreFile').onchange=async()=>{const f=$('restoreFile').files[0];if(!f)return;try{const p=JSON.parse(await f.text());if(!Array.isArray(p.tournaments)||!Array.isArray(p.expenses))throw new Error('Invalid backup');if(!Array.isArray(p.incomes))p.incomes=[];if(!confirm('Restore backup? Existing data will be replaced.'))return;await db.execute('DELETE FROM tournaments');await db.execute('DELETE FROM chess_expenses');await db.execute('DELETE FROM chess_income');for(const t of p.tournaments){await db.execute(`INSERT INTO tournaments (id,name,date,location,organizer,tournament_type,rating_category,custom_category,format,participants,rounds,time_control,rating,position,score,performance,prize,registration,travel,food,accommodation,other,notes) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,[t.id||newId(),t.name||'',t.date||today(),t.location||'',t.organizer||'',t.tournament_type||t.tournamentType||'Open',t.rating_category||t.ratingCategory||'Open',t.custom_category||t.customCategory||'',t.format||'Classical',Number(t.participants||0),Number(t.rounds||0),t.time_control||t.time||'',Number(t.rating||0),Number(t.position||0),t.score||'',Number(t.performance||0),Number(t.prize||0),Number(t.registration||0),Number(t.travel||0),Number(t.food||0),Number(t.accommodation||0),Number(t.other||0),t.notes||''])}for(const x of p.expenses){await db.execute('INSERT INTO chess_expenses (id,date,category,description,amount,notes) VALUES (?,?,?,?,?,?)',[x.id||newId(),x.date||today(),x.category||'Other Expense',x.description||'Expense',Number(x.amount||0),x.notes||''])}for(const x of p.incomes){await db.execute('INSERT INTO chess_income (id,date,category,description,amount,notes) VALUES (?,?,?,?,?,?)',[x.id||newId(),x.date||today(),x.category||'Other Chess Income',x.description||'Income',Number(x.amount||0),x.notes||''])}await load();alert('Backup restored successfully.')}catch(err){alert('Could not restore backup: '+err.message)}$('restoreFile').value=''};
+
+$('settingsBackupBtn').onclick=backup;
+$('settingsRestoreBtn').onclick=()=>$('restoreFile').click();
+
+$('settingsClearBtn').onclick=async()=>{
+  const first=confirm(
+    '⚠️ Clear All Data?\\n\\n' +
+    'This will permanently delete all tournaments, other expenses, other income and calendar events.\\n\\n' +
+    'This action cannot be undone.'
+  );
+
+  if(!first)return;
+
+  const second=confirm(
+    'Are you absolutely sure?\\n\\n' +
+    'All Chess Ledger records will be permanently deleted.'
+  );
+
+  if(!second)return;
+
+  try{
+    await db.execute('DELETE FROM tournaments');
+    await db.execute('DELETE FROM chess_expenses');
+    await db.execute('DELETE FROM chess_income');
+    await db.execute('DELETE FROM events');
+
+    await load();
+    renderCalendar();
+
+    alert('All Chess Ledger data has been cleared.');
+  }catch(err){
+    console.error(err);
+    alert('Could not clear data: '+(err?.message||String(err)));
+  }
+};
+
+$('restoreFile').onchange=async()=>{
+  const f=$('restoreFile').files[0];
+  if(!f)return;
+
+  try{
+    const p=JSON.parse(await f.text());
+
+    if(!Array.isArray(p.tournaments)||
+       !Array.isArray(p.expenses)||
+       !Array.isArray(p.incomes)){
+      throw new Error('Invalid Chess Ledger backup file.');
+    }
+
+    if(!Array.isArray(p.events)){
+      p.events=[];
+    }
+
+    if(!confirm(
+      'Restore backup?\\n\\n' +
+      'Existing Chess Ledger data will be replaced by the backup.'
+    )){
+      return;
+    }
+
+    await db.execute('DELETE FROM tournaments');
+    await db.execute('DELETE FROM chess_expenses');
+    await db.execute('DELETE FROM chess_income');
+    await db.execute('DELETE FROM events');
+
+    for(const t of p.tournaments){
+      await db.execute(`
+        INSERT INTO tournaments
+        (id,name,date,location,organizer,mode,tournament_type,
+         rating_category,custom_category,format,participants,rounds,
+         time_control,rating,position,score,performance,prize,
+         registration,travel,food,accommodation,other,notes)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+      `,[
+        t.id||newId(),
+        t.name||'',
+        t.date||today(),
+        t.location||'',
+        t.organizer||'',
+        t.mode||'Offline',
+        t.tournament_type||t.tournamentType||'Open',
+        t.rating_category||t.ratingCategory||'Open',
+        t.custom_category||t.customCategory||'',
+        t.format||'Classical',
+        Number(t.participants||0),
+        Number(t.rounds||0),
+        t.time_control||t.time||'',
+        Number(t.rating||0),
+        Number(t.position||0),
+        t.score||'',
+        Number(t.performance||0),
+        Number(t.prize||0),
+        Number(t.registration||0),
+        Number(t.travel||0),
+        Number(t.food||0),
+        Number(t.accommodation||0),
+        Number(t.other||0),
+        t.notes||''
+      ]);
+    }
+
+    for(const x of p.expenses){
+      await db.execute(`
+        INSERT INTO chess_expenses
+        (id,date,category,description,amount,notes)
+        VALUES (?,?,?,?,?,?)
+      `,[
+        x.id||newId(),
+        x.date||today(),
+        x.category||'Other Expense',
+        x.description||'Expense',
+        Number(x.amount||0),
+        x.notes||''
+      ]);
+    }
+
+    for(const x of p.incomes){
+      await db.execute(`
+        INSERT INTO chess_income
+        (id,date,category,description,amount,notes)
+        VALUES (?,?,?,?,?,?)
+      `,[
+        x.id||newId(),
+        x.date||today(),
+        x.category||'Other Income',
+        x.description||'Income',
+        Number(x.amount||0),
+        x.notes||''
+      ]);
+    }
+
+    for(const e of p.events){
+      await db.execute(`
+        INSERT INTO events
+        (id,name,date,location,organizer,mode,format,deadline,reminder,notes)
+        VALUES (?,?,?,?,?,?,?,?,?,?)
+      `,[
+        e.id||newId(),
+        e.name||'',
+        e.date||today(),
+        e.location||'',
+        e.organizer||'',
+        e.mode||'Offline',
+        e.format||'Classical',
+        e.deadline||'',
+        Number(e.reminder??-1),
+        e.notes||''
+      ]);
+    }
+
+    await load();
+    renderCalendar();
+
+    alert('Backup restored successfully.');
+  }catch(err){
+    console.error(err);
+    alert('Could not restore backup: '+(err?.message||String(err)));
+  }
+
+  $('restoreFile').value='';
+};
+
+setupCurrency();
 init().catch(err=>{console.error(err);document.body.insertAdjacentHTML('afterbegin','<div style="padding:12px;background:#fee;color:#900">Database could not be opened. Please run the Tauri app, not index.html directly.</div>')});
 ['participants','rounds','position','score'].forEach(id=>{
   $(id).addEventListener('input',calculateTPS);
