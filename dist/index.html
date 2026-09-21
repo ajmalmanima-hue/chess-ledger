@@ -1,15 +1,313 @@
-<!doctype html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Chess Ledger</title>  <script type="module" crossorigin src="/assets/index-GONxNyN2.js"></script>
-  <link rel="stylesheet" crossorigin href="/assets/index-Blyya0yC.css">
+<!doctype html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Chess Ledger</title>  <script type="module" crossorigin src="/assets/index-BE92CE26.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index-CanKJs4a.css">
 </head><body>
-<header><div><h1>♟ Chess Ledger</h1><p>Tournaments & chess expenses</p></div><div class="header-actions"><button id="backupBtn">Backup</button><button id="restoreBtn">Restore</button><input id="restoreFile" type="file" accept="application/json" hidden><button id="addIncomeBtn">+ Chess Income</button><button id="addExpenseBtn">+ Chess Expense</button><button id="addBtn" class="primary">+ Tournament</button></div></header>
+<header><div><h1>♟ Chess Ledger</h1><p>Tournaments & other expenses</p></div><div class="header-actions"><button id="backupBtn">Backup</button><button id="restoreBtn">Restore</button><input id="restoreFile" type="file" accept="application/json" hidden><button id="addIncomeBtn">+ Other Income</button><button id="addExpenseBtn">+ Other Expense</button><button id="addBtn" class="primary">+ Tournament</button></div></header>
 <main>
-<section class="stats"><div><span>Tournaments</span><b id="count">0</b></div><div><span>Tournament Expense</span><b id="expense">₹0</b></div><div><span>Chess Expenses</span><b id="chessExpense">₹0</b></div><div><span>Prize Money</span><b id="prize">₹0</b></div><div><span>Chess Income</span><b id="otherIncome">₹0</b></div><div><span>Total Income</span><b id="totalIncome">₹0</b></div><div><span>Overall Expense</span><b id="overall">₹0</b></div><div><span>Net Chess Result</span><b id="netOverall">₹0</b></div></section>
-<section class="tabs"><button class="tab active" data-tab="dashboard">📊 Dashboard</button><button class="tab" data-tab="tournaments">🏆 Tournaments</button><button class="tab" data-tab="expenses">💰 Chess Expenses</button><button class="tab" data-tab="income">💵 Chess Income</button></section>
+<section class="stats dashboard-summary"> <div><span>Tournaments</span><b id="count">0</b></div><div><span>Tournament Expenses</span><b id="expense">₹0</b></div><div><span>Other Expenses</span><b id="chessExpense">₹0</b></div><div><span>Prize Money</span><b id="prize">₹0</b></div><div><span>Other Income</span><b id="otherIncome">₹0</b></div><div><span>Total Income</span><b id="totalIncome">₹0</b></div><div><span>Overall Expense</span><b id="overall">₹0</b></div><div class="net-result-card">
+  <span>NET RESULT</span>
+  <b id="netOverall">₹0</b>
+</div> </section>
+<section class="tabs"><button class="tab active" data-tab="dashboard">📊 Dashboard</button><button class="tab" data-tab="performance">📈 Performance</button><button class="tab" data-tab="tournaments">🏆 Tournaments</button><button class="tab" data-tab="expenses">💰 Other Expenses</button><button class="tab" data-tab="income">💵 Other Income</button><button class="tab" data-tab="calendar">📅 Calendar</button> </section>
 <section id="dashboardSection" class="panel dashboard-panel"><div class="head"><div><h2>Dashboard</h2><div class="meta">Your chess finances and tournament activity</div></div><select id="dashYear"><option value="all">All Years</option></select></div><div class="dash-grid"><div class="chart-card"><h3>Monthly income vs expense</h3><div class="chart-wrap"><svg id="monthlyChart" viewBox="0 0 760 280" role="img" aria-label="Monthly income and expense chart"></svg></div></div><div class="chart-card"><h3>Expenses by category</h3><div id="expenseChart" class="bar-chart"></div></div><div class="chart-card"><h3>Income by source</h3><div id="incomeChart" class="bar-chart"></div></div><div class="chart-card"><h3>Tournaments by format</h3><div id="formatChart" class="bar-chart"></div></div></div></section>
-<section id="tournamentSection" class="panel hidden"><div class="head"><h2>Tournaments</h2><div class="tournament-tools"><div class="view-switch"><button type="button" id="cardViewBtn" class="view-btn active">▦ Card</button><button type="button" id="listViewBtn" class="view-btn">☷ List</button></div><input id="search" placeholder="Search tournaments..."></div></div><div id="empty">No tournaments yet. Add your first tournament.</div><div id="list"></div></section>
-<section id="expenseSection" class="panel hidden"><div class="head"><h2>Chess Expenses</h2><input id="expenseSearch" placeholder="Search expenses..."></div><div id="expenseEmpty">No chess expenses yet.</div><div id="expenseList"></div></section><section id="incomeSection" class="panel hidden"><div class="head"><h2>Chess Income</h2><input id="incomeSearch" placeholder="Search income..."></div><div id="incomeEmpty">No chess income yet.</div><div id="incomeList"></div></section>
+<section id="performanceSection" class="panel hidden">
+<div class="head">
+  <div>
+    <h2>Performance Dashboard</h2>
+    <div class="meta">Analyze your tournament performance</div>
+  </div>
+  <select id="performanceYear"><option value="all">All Years</option></select>
+</div>
+
+<div class="stats performance-stats">
+  <div><span>Tournaments</span><b id="perfCount">0</b></div>
+  <div><span>Average TPS</span><b id="avgTPS">—</b></div>
+  <div><span>Best TPS</span><b id="bestTPS">—</b></div>
+  <div><span>Best Position</span><b id="bestPosition">—</b></div>
+</div>
+
+<div class="stats performance-insights">
+  <div><span>Best Format</span><b id="bestFormat">—</b></div>
+  <div><span>Best Rating Category</span><b id="bestCategory">—</b></div>
+  <div><span>Best Mode</span><b id="bestMode">—</b></div>
+  <div><span>Best Tournament</span><b id="bestTournament">—</b></div>
+</div>
+
+<div class="dash-grid">
+  <div class="chart-card">
+    <h3>Performance Trend</h3>
+    <div id="performanceTrend" class="bar-chart"></div>
+  </div>
+
+  <div class="chart-card">
+    <h3>Performance by Format</h3>
+    <div id="performanceFormat" class="bar-chart"></div>
+  </div>
+
+  <div class="chart-card">
+    <h3>Performance by Rating Category</h3>
+    <div id="performanceCategory" class="bar-chart"></div>
+  </div>
+
+  <div class="chart-card">
+    <h3>Online vs Offline</h3>
+    <div id="performanceMode" class="bar-chart"></div>
+  </div>
+  <div class="chart-card">
+    <h3>Performance Efficiency (TPS per ₹1,000) </h3>
+    <div id="performanceCost" class="bar-chart"></div>
+<div class="meta">Shows TPS achieved for every ₹1,000 spent. Higher values indicate better performance efficiency.</div>
+  </div>
+</div>
+</section>
+<section id="tournamentSection" class="panel hidden">
+  <div class="head tournament-head">
+    <h2>Tournaments</h2>
+
+    <div class="tournament-controls">
+
+      <div class="filter-row">
+        <select id="filterMode">
+          <option value="all">All Modes</option>
+          <option value="Offline">Offline</option>
+          <option value="Online">Online</option>
+        </select>
+
+        <select id="filterType">
+          <option value="all">All Types</option>
+          <option value="Open">Open</option>
+          <option value="Rated">Rated</option>
+          <option value="Unrated">Unrated</option>
+          <option value="Team">Team</option>
+          <option value="Junior">Junior</option>
+          <option value="Women's">Women's</option>
+          <option value="Club">Club</option>
+          <option value="School/College">School/College</option>
+          <option value="Other">Other</option>
+        </select>
+
+        <select id="filterFormat">
+          <option value="all">All Formats</option>
+          <option value="Classical">Classical</option>
+          <option value="Rapid">Rapid</option>
+          <option value="Blitz">Blitz</option>
+          <option value="Other">Other</option>
+        </select>
+
+        <select id="filterCategory">
+          <option value="all">All Categories</option>
+          <option value="Open">Open</option>
+          <option value="Below 2000">Below 2000</option>
+          <option value="Below 1900">Below 1900</option>
+          <option value="Below 1800">Below 1800</option>
+          <option value="Below 1700">Below 1700</option>
+          <option value="Below 1600">Below 1600</option>
+          <option value="Below 1500">Below 1500</option>
+          <option value="Below 1400">Below 1400</option>
+          <option value="Below 1200">Below 1200</option>
+          <option value="Unrated">Unrated</option>
+        </select>
+
+        <select id="filterYear">
+          <option value="all">All Years</option>
+        </select>
+      </div>
+
+      <div class="action-row">
+        <div class="view-switch">
+          <button type="button" id="cardViewBtn" class="view-btn active">▦ Card</button>
+          <button type="button" id="listViewBtn" class="view-btn">☷ List</button>
+        </div>
+
+        <input id="search" placeholder="Search tournaments...">
+
+        <button type="button" id="clearFiltersBtn">↻ Clear Filters</button>
+      </div>
+
+    </div>
+  </div> <div id="empty">No tournaments yet. Add your first tournament.</div><div id="list"></div></section>
+<section id="expenseSection" class="panel hidden">
+  <div class="head">
+    <div>
+      <h2>Other Expenses</h2>
+      <div class="meta">Track and analyze your chess-related expenses outside tournaments</div>
+    </div>
+    <select id="expenseYear">
+      <option value="all">All Years</option>
+    </select>
+  </div>
+
+  <div class="stats expense-income-stats">
+    <div><span>Total Expenses</span><b id="expenseTabTotal">₹0</b></div>
+    <div><span>This Month</span><b id="expenseTabMonth">₹0</b></div>
+    <div><span>Entries</span><b id="expenseTabCount">0</b></div>
+    <div><span>Average Expense</span><b id="expenseTabAverage">₹0</b></div>
+  </div>
+
+  <div class="chart-card expense-income-chart">
+    <h3>Expenses by Category</h3>
+    <div id="expenseCategoryChart" class="bar-chart"></div>
+  </div>
+
+  <div class="section-toolbar">
+    <div class="view-switch">
+      <button type="button" id="expenseCardViewBtn" class="view-btn active">▦ Card</button>
+      <button type="button" id="expenseListViewBtn" class="view-btn">☷ List</button>
+    </div>
+    <input id="expenseSearch" placeholder="Search expenses...">
+  </div>
+
+  <div id="expenseEmpty">No other expenses yet.</div>
+  <div id="expenseList"></div>
+</section>
+
+<section id="incomeSection" class="panel hidden">
+  <div class="head">
+    <div>
+      <h2>Other Income</h2>
+      <div class="meta">Track and analyze your chess-related income</div>
+    </div>
+    <select id="incomeYear">
+      <option value="all">All Years</option>
+    </select>
+
+  </div>
+
+  <div class="stats expense-income-stats">
+    <div><span>Total Income</span><b id="incomeTabTotal">₹0</b></div>
+    <div><span>This Month</span><b id="incomeTabMonth">₹0</b></div>
+    <div><span>Entries</span><b id="incomeTabCount">0</b></div>
+    <div><span>Average Income</span><b id="incomeTabAverage">₹0</b></div>
+  </div>
+
+  <div class="chart-card expense-income-chart">
+    <h3>Income by Category</h3>
+    <div id="incomeCategoryChart" class="bar-chart"></div>
+  </div>
+
+  <div class="section-toolbar">
+    <div class="view-switch">
+      <button type="button" id="incomeCardViewBtn" class="view-btn active">▦ Card</button>
+      <button type="button" id="incomeListViewBtn" class="view-btn">☷ List</button>
+    </div>
+    <input id="incomeSearch" placeholder="Search other income...">
+  </div>
+
+  <div id="incomeEmpty">No Other income yet.</div>
+  <div id="incomeList"></div>
+</section>
+<section id="calendarSection" class="panel hidden">
+  <div class="head">
+    <div>
+      <h2>📅 Chess Calendar</h2>
+      <div class="meta">Plan upcoming tournaments and review your chess history</div>
+    </div>
+    <button id="addEventBtn" class="primary">+ Add Event</button>
+  </div>
+
+  <div class="calendar-toolbar">
+    <button type="button" id="prevMonthBtn">‹</button>
+    <h3 id="calendarMonth"></h3>
+    <button type="button" id="nextMonthBtn">›</button>
+  </div>
+
+  <div id="calendarGrid" class="calendar-grid"></div>
+
+  <div class="calendar-lists">
+    <div>
+      <h3>Upcoming</h3>
+      <div id="upcomingEvents"></div>
+    </div>
+
+    <div>
+      <h3>Past</h3>
+      <div id="pastEvents"></div>
+    </div>
+  </div>
+</section>
 </main>
 <div id="detailsModal" class="modal hidden"><div class="dialog"><div class="head"><h2>🏆 Tournament Details</h2><button type="button" id="detailsClose">×</button></div><div id="detailsContent"></div><div class="actions"><button type="button" id="detailsEdit" class="primary">Edit</button><button type="button" id="detailsCloseBottom">Close</button></div></div></div>
+<div id="eventModal" class="modal hidden">
+  <div class="dialog">
+    <div class="head">
+      <div>
+        <h2 id="eventModalTitle">Add Event</h2>
+        <div class="meta">Add an upcoming chess tournament or event</div>
+      </div>
+      <button type="button" id="eventClose">×</button>
+    </div>
+
+    <form id="eventForm">
+      <input type="hidden" id="eventId">
+
+      <div class="grid">
+        <label>
+          Event Name
+          <input id="eventName" required>
+        </label>
+
+        <label>
+          Date
+          <input id="eventDate" type="date" required>
+        </label>
+
+        <label>
+          Location
+          <input id="eventLocation">
+        </label>
+
+        <label>
+          Organizer
+          <input id="eventOrganizer">
+        </label>
+
+        <label>
+          Mode
+          <select id="eventMode">
+            <option>Offline</option>
+            <option>Online</option>
+          </select>
+        </label>
+
+        <label>
+          Format
+          <select id="eventFormat">
+            <option>Classical</option>
+            <option>Rapid</option>
+            <option>Blitz</option>
+            <option>Mixed</option>
+            <option>Other</option>
+          </select>
+        </label>
+
+        <label>
+          Registration Deadline
+          <input id="eventDeadline" type="date">
+        </label>
+
+        <label>
+          Reminder
+          <select id="eventReminder">
+            <option value="-1">No Reminder</option>
+            <option value="0">On Event Day</option>
+            <option value="1">1 Day Before</option>
+            <option value="3">3 Days Before</option>
+            <option value="7">7 Days Before</option>
+          </select>
+        </label>
+      </div>
+
+      <label>
+        Notes
+        <textarea id="eventNotes"></textarea>
+      </label>
+
+      <div class="actions">
+        <button type="button" id="eventCancel">Cancel</button>
+        <button type="submit" class="primary">Save Event</button>
+      </div>
+    </form>
+  </div>
+</div>
 <div id="modal" class="modal hidden"><div class="dialog"><div class="head"><h2 id="title">Add Tournament</h2><button id="close">×</button></div>
 <form id="form"><input type="hidden" id="id"><div id="tournamentFields"><h3>🏆 Tournament</h3><div class="grid">
 <label>Name *<input id="name" required></label><label>Date *<input id="date" type="date" required></label><label>Location<input id="location"></label><label>Organizer<input id="organizer"></label>
@@ -17,8 +315,8 @@
 <label>Tournament type<select id="tournamentType"><option>Open</option><option>Rated</option><option>Unrated</option><option>Team</option><option>Junior</option><option>Women's</option><option>Club</option><option>School/College</option><option>Other</option></select></label>
 <label>Rating category<select id="ratingCategory"><option>Open</option><option>Below 2000</option><option>Below 1900</option><option>Below 1800</option><option>Below 1700</option><option>Below 1600</option><option>Below 1500</option><option>Below 1400</option><option>Below 1200</option><option>Unrated</option><option>Other / Custom</option></select></label>
 <label>Custom rating category<input id="customCategory" placeholder="e.g. Below 1750"></label><label>Format<select id="format"><option>Classical</option><option>Rapid</option><option>Blitz</option><option>Other</option></select></label><label>Participants<input id="participants" type="number" min="0"></label><label>Rounds<input id="rounds" type="number" min="0"></label><label>Time control<input id="time"></label></div>
-<h3>♟ My Performance</h3><div class="grid"><label>My rating<input id="rating" type="number" min="0"></label><label>Final position<input id="position" type="number" min="1"></label><label>Score<input id="score" placeholder="e.g. 5/7"></label><label>Performance rating<input id="performance" type="number" min="0"></label><label>Prize money (₹)<input id="prizeInput" type="number" min="0" step="0.01" value="0"></label></div>
+<h3>♟ My Performance</h3><div class="grid"><label>My rating<input id="rating" type="number" min="0"></label><label>Final position<input id="position" type="number" min="1"></label><label>Points Scored<input id="score" type="number" min="0" step="0.5" placeholder="e.g. 6"></label><label>Tournament Performance Score<input id="performance" type="number" min="0" max="100" step="0.1" readonly placeholder="Auto"></label><label>Prize money (₹)<input id="prizeInput" type="number" min="0" step="0.01" value="0"></label> </div>
 <h3>💰 Tournament Expenses</h3><div class="grid"><label>Registration<input id="registration" type="number" min="0" step="0.01" value="0"></label><label>Travel<input id="travel" type="number" min="0" step="0.01" value="0"></label><label>Food<input id="food" type="number" min="0" step="0.01" value="0"></label><label>Accommodation<input id="accommodation" type="number" min="0" step="0.01" value="0"></label><label>Other<input id="other" type="number" min="0" step="0.01" value="0"></label></div>
 <label>Notes<textarea id="notes"></textarea></label><div class="calc"><span>Total tournament expense: <b id="total">₹0</b></span><span>Net tournament result: <b id="result">₹0</b></span></div></div>
-<div id="incomeFields" class="hidden"><h3>💵 Chess Income</h3><div class="grid"><label>Date *<input id="incomeDate" type="date" required></label><label>Category<select id="incomeCategory"><option>Coaching / Training</option><option>Arbiter Fee</option><option>Tournament Organizing</option><option>Chess Commentary</option><option>Online Coaching</option><option>Chess Workshop</option><option>Chess Content</option><option>Other Chess Income</option></select></label><label>Description *<input id="incomeDescription" required></label><label>Amount (₹) *<input id="incomeAmount" type="number" min="0" step="0.01" required></label></div><label>Notes<textarea id="incomeNotes"></textarea></label></div><div id="expenseFields" class="hidden"><h3>💰 Chess Expense</h3><div class="grid"><label>Date *<input id="expenseDate" type="date" required></label><label>Category<select id="expenseCategory"><option>Chess Books</option><option>Coaching / Training</option><option>Online Tournament</option><option>Chess Software</option><option>Chess Courses</option><option>Chess Equipment</option><option>Chess Travel</option><option>Club Fee</option><option>Other Chess Expense</option></select></label><label>Description *<input id="expenseDescription" required></label><label>Amount (₹) *<input id="expenseAmount" type="number" min="0" step="0.01" required></label></div><label>Notes<textarea id="expenseNotes"></textarea></label></div>
+<div id="incomeFields" class="hidden"><h3>💵 Other Income</h3><div class="grid"><label>Date *<input id="incomeDate" type="date" required></label><label>Category<select id="incomeCategory"><option>Coaching / Training</option><option>Arbiter Fee</option><option>Tournament Organizing</option><option>Chess Commentary</option><option>Online Coaching</option><option>Chess Workshop</option><option>Chess Content</option><option>Other Income</option></select></label><label>Description *<input id="incomeDescription" required></label><label>Amount (₹) *<input id="incomeAmount" type="number" min="0" step="0.01" required></label></div><label>Notes<textarea id="incomeNotes"></textarea></label></div><div id="expenseFields" class="hidden"><h3>💰 Other Expense</h3><div class="grid"><label>Date *<input id="expenseDate" type="date" required></label><label>Category<select id="expenseCategory"><option>Chess Books</option><option>Coaching / Training</option><option>Online Tournament</option><option>Chess Software</option><option>Chess Courses</option><option>Chess Equipment</option><option>Chess Travel</option><option>Club Fee</option><option>Other Expense</option></select></label><label>Description *<input id="expenseDescription" required></label><label>Amount (₹) *<input id="expenseAmount" type="number" min="0" step="0.01" required></label></div><label>Notes<textarea id="expenseNotes"></textarea></label></div>
 <div class="actions"><button type="button" id="cancel">Cancel</button><button type="submit" class="primary">Save</button></div></form></div></div></body></html>

@@ -4,8 +4,6 @@ import { writeTextFile } from '@tauri-apps/plugin-fs';
 
 let db;
 let data=[];
-let events=[];
-let calendarDate=new Date();
 let expenses=[];
 let incomes=[];
 let edit=null;
@@ -26,24 +24,9 @@ async function init(){
 
   await db.execute(`CREATE TABLE IF NOT EXISTS chess_expenses (id TEXT PRIMARY KEY,date TEXT NOT NULL,category TEXT NOT NULL,description TEXT NOT NULL,amount REAL NOT NULL,notes TEXT,created_at TEXT DEFAULT CURRENT_TIMESTAMP)`);
   await db.execute(`CREATE TABLE IF NOT EXISTS chess_income (id TEXT PRIMARY KEY,date TEXT NOT NULL,category TEXT NOT NULL,description TEXT NOT NULL,amount REAL NOT NULL,notes TEXT,created_at TEXT DEFAULT CURRENT_TIMESTAMP)`);
-  await db.execute(`
-  CREATE TABLE IF NOT EXISTS events (
-    id TEXT PRIMARY KEY,
-    name TEXT NOT NULL,
-    date TEXT NOT NULL,
-    location TEXT,
-    organizer TEXT,
-    mode TEXT DEFAULT 'Offline',
-    format TEXT DEFAULT 'Classical',
-    deadline TEXT,
-    reminder INTEGER DEFAULT -1,
-    notes TEXT,
-    created_at TEXT DEFAULT CURRENT_TIMESTAMP
-  )
-`);
-await load();
+  await load();
 }
-async function load(){data=await db.select('SELECT * FROM tournaments ORDER BY date DESC, created_at DESC');expenses=await db.select('SELECT * FROM chess_expenses ORDER BY date DESC, created_at DESC');incomes=await db.select('SELECT * FROM chess_income ORDER BY date DESC, created_at DESC');events=await db.select('SELECT * FROM events ORDER BY date ASC, created_at ASC');buildPerformanceYearFilter();render()}
+async function load(){data=await db.select('SELECT * FROM tournaments ORDER BY date DESC, created_at DESC');expenses=await db.select('SELECT * FROM chess_expenses ORDER BY date DESC, created_at DESC');incomes=await db.select('SELECT * FROM chess_income ORDER BY date DESC, created_at DESC');buildPerformanceYearFilter();render()}
 function yearOf(date){return String(date||'').slice(0,4)}
 function escText(x){return esc(x)}
 function buildYearFilter(){
@@ -653,275 +636,6 @@ function renderIncomeList(rows){
 
 window.expenseView='card';
 window.incomeView='card';
-
-function renderCalendar(){
-  const year=calendarDate.getFullYear();
-  const month=calendarDate.getMonth();
-
-  $('calendarMonth').textContent=
-    calendarDate.toLocaleString('default',{
-      month:'long',
-      year:'numeric'
-    });
-
-  const firstDay=new Date(year,month,1).getDay();
-  const daysInMonth=new Date(year,month+1,0).getDate();
-  const start=(firstDay+6)%7;
-
-  let html=['Mon','Tue','Wed','Thu','Fri','Sat','Sun']
-    .map(d=>`<div class="calendar-day-name">${d}</div>`)
-    .join('');
-
-  for(let i=0;i<start;i++){
-    html+='<div class="calendar-day empty"></div>';
-  }
-
-  for(let day=1;day<=daysInMonth;day++){
-    const dateKey=
-      `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
-
-    const dayEvents=events.filter(e=>e.date===dateKey);
-    const dayTournaments=data.filter(t=>t.date===dateKey);
-
-    html+=`
-      <div class="calendar-day${dateKey===today()?' today':''}">
-        <div class="calendar-date">${day}</div>
-
-        ${dayTournaments.map(t=>`
-          <div class="calendar-event tournament-event">
-            🏆 ${escText(t.name)}
-          </div>
-        `).join('')}
-
-        ${dayEvents.map(e=>`
-          <div class="calendar-event">
-            📅 ${escText(e.name)}
-          </div>
-        `).join('')}
-      </div>
-    `;
-  }
-
-  $('calendarGrid').innerHTML=html;
-
-  const todayDate=today();
-
-  const upcoming=[
-    ...events
-      .filter(e=>e.date>=todayDate)
-      .map(e=>({...e,eventType:'event'})),
-    ...data
-      .filter(t=>t.date>=todayDate)
-      .map(t=>({...t,eventType:'tournament'}))
-  ].sort((a,b)=>a.date.localeCompare(b.date));
-
-  const past=[
-    ...events
-      .filter(e=>e.date<todayDate)
-      .map(e=>({...e,eventType:'event'})),
-    ...data
-      .filter(t=>t.date<todayDate)
-      .map(t=>({...t,eventType:'tournament'}))
-  ].sort((a,b)=>b.date.localeCompare(a.date));
-
-  renderCalendarList('upcomingEvents',upcoming,true);
-  renderCalendarList('pastEvents',past,false);
-}
-
-function renderCalendarList(id,rows,upcoming){
-  const el=$(id);
-  if(!el)return;
-
-  if(!rows.length){
-    el.innerHTML=`
-      <div class="chart-empty">
-        ${upcoming?'No upcoming events.':'No past events.'}
-      </div>
-    `;
-    return;
-  }
-
-  el.innerHTML=rows.map(e=>`
-    <div class="row calendar-list-row">
-      <div>
-        <h3>${e.eventType==='tournament'?'🏆':'📅'} ${esc(e.name)}</h3>
-
-        <div class="meta">
-          ${esc(e.date)}
-          ${e.location?' • '+esc(e.location):''}
-          ${e.format?' • '+esc(e.format):''}
-        </div>
-
-        ${e.organizer?`<div class="meta">${esc(e.organizer)}</div>`:''}
-
-        ${e.eventType==='event'
-          ?`<div class="actions">
-              <button onclick="editEvent('${e.id}')">Edit</button>
-              <button onclick="convertEvent('${e.id}')">🏆 Convert to Tournament</button>
-              <button onclick="deleteEvent('${e.id}')">Delete</button>
-            </div>`
-          :''
-        }
-      </div>
-    </div>
-  `).join('');
-}
-
-window.editEvent=id=>{
-  const e=events.find(x=>x.id===id);
-  if(!e)return;
-
-  $('eventModalTitle').textContent='Edit Event';
-  $('eventId').value=e.id||'';
-  $('eventName').value=e.name||'';
-  $('eventDate').value=e.date||today();
-  $('eventLocation').value=e.location||'';
-  $('eventOrganizer').value=e.organizer||'';
-  $('eventMode').value=e.mode||'Offline';
-  $('eventFormat').value=e.format||'Classical';
-  $('eventDeadline').value=e.deadline||'';
-  $('eventReminder').value=e.reminder??'-1';
-  $('eventNotes').value=e.notes||'';
-
-  $('eventModal').classList.remove('hidden');
-};
-
-window.convertEvent=id=>{
-  const e=events.find(x=>x.id===id);
-  if(!e)return;
-
-  openTournament({
-    name:e.name||'',
-    date:e.date||today(),
-    location:e.location||'',
-    organizer:e.organizer||'',
-    mode:e.mode||'Offline',
-    tournament_type:'Open',
-    rating_category:'Open',
-    custom_category:'',
-    format:e.format||'Classical',
-    participants:0,
-    rounds:0,
-    time_control:'',
-    rating:0,
-    position:0,
-    score:'',
-    performance:0,
-    prize:0,
-    registration:0,
-    travel:0,
-    food:0,
-    accommodation:0,
-    other:0,
-    notes:e.notes||''
-  });
-
-  edit=null;
-  window.convertingEventId=id;
-};
-
-window.deleteEvent=async id=>{
-  const e=events.find(x=>x.id===id);
-  if(!e)return;
-
-  if(!confirm(`Delete "${e.name}"?`))return;
-
-  try{
-    await db.execute('DELETE FROM events WHERE id=?',[id]);
-    await load();
-    renderCalendar();
-  }catch(err){
-    console.error(err);
-    alert('Could not delete event. '+err);
-  }
-};
-
-
-function openEvent(){
-  $('eventModalTitle').textContent='Add Event';
-  $('eventId').value='';
-  $('eventName').value='';
-  $('eventDate').value=today();
-  $('eventLocation').value='';
-  $('eventOrganizer').value='';
-  $('eventMode').value='Offline';
-  $('eventFormat').value='Classical';
-  $('eventDeadline').value='';
-  $('eventReminder').value='-1';
-  $('eventNotes').value='';
-
-  $('eventModal').classList.remove('hidden');
-}
-
-$('addEventBtn').onclick=()=>openEvent();
-
-$('eventClose').onclick=()=>{
-  $('eventModal').classList.add('hidden');
-};
-
-$('eventCancel').onclick=()=>{
-  $('eventModal').classList.add('hidden');
-};
-
-$('eventForm').onsubmit=async e=>{
-  e.preventDefault();
-
-  const existingId=$('eventId').value.trim();
-  const id=existingId||newId();
-
-  const name=$('eventName').value.trim();
-  const date=$('eventDate').value;
-  const location=$('eventLocation').value.trim();
-  const organizer=$('eventOrganizer').value.trim();
-  const mode=$('eventMode').value;
-  const format=$('eventFormat').value;
-  const deadline=$('eventDeadline').value;
-  const reminder=Number($('eventReminder').value);
-  const notes=$('eventNotes').value.trim();
-
-  if(!name||!date){
-    alert('Please enter Event Name and Date.');
-    return;
-  }
-
-  try{
-    if(existingId){
-      await db.execute(`
-        UPDATE events
-        SET name=?,date=?,location=?,organizer=?,mode=?,format=?,deadline=?,reminder=?,notes=?
-        WHERE id=?
-      `,[
-        name,date,location,organizer,mode,format,
-        deadline,reminder,notes,id
-      ]);
-
-      alert('Event updated successfully.');
-    }else{
-      await db.execute(`
-        INSERT INTO events
-        (id,name,date,location,organizer,mode,format,deadline,reminder,notes)
-        VALUES (?,?,?,?,?,?,?,?,?,?)
-      `,[
-        id,name,date,location,organizer,mode,format,
-        deadline,reminder,notes
-      ]);
-
-      alert('Event saved successfully.');
-    }
-
-    $('eventModal').classList.add('hidden');
-
-    await load();
-    renderCalendar();
-
-  }catch(err){
-    console.error(err);
-    alert('Could not save event. '+err);
-  }
-};
-
-
-
 function render(){
 let q=$('search').value.toLowerCase();let modeFilter=$('filterMode').value;let typeFilter=$('filterType').value;let formatFilter=$('filterFormat').value;let categoryFilter=$('filterCategory').value;let yearFilter=$('filterYear').value;let rows=data.filter(t=>(t.name+' '+t.location+' '+t.organizer+' '+(t.mode||'')+' '+(t.tournament_type||'')+' '+cat(t)+' '+t.format).toLowerCase().includes(q)&&(modeFilter==='all'||(t.mode||'Offline')===modeFilter)&&(typeFilter==='all'||(t.tournament_type||'Open')===typeFilter)&&(formatFilter==='all'||(t.format||'Classical')===formatFilter)&&(categoryFilter==='all'||(cat(t)||'Open')===categoryFilter)&&(yearFilter==='all'||yearOf(t.date)===yearFilter));
  $('count').textContent=data.length;const te=data.reduce((s,t)=>s+expenseTotal(t),0),ce=expenses.reduce((s,e)=>s+Number(e.amount||0),0),pr=data.reduce((s,t)=>s+Number(t.prize||0),0),inc=incomes.reduce((s,e)=>s+Number(e.amount||0),0),oe=te+ce,totalIncome=pr+inc; $('expense').textContent=money(te);$('chessExpense').textContent=money(ce);$('prize').textContent=money(pr);$('overall').textContent=money(oe);$('otherIncome').textContent=money(inc);$('totalIncome').textContent=money(totalIncome);$('netOverall').textContent=(totalIncome-oe>=0?'+':'-')+money(Math.abs(totalIncome-oe));$('netOverall').className=totalIncome-oe>=0?'positive':'negative';
@@ -1087,7 +801,8 @@ $('incomeListViewBtn').onclick=()=>{
   render();
 };
 ['registration','travel','food','accommodation','other','prizeInput'].forEach(id=>$(id).oninput=calc);
-document.querySelectorAll('.tab').forEach(btn=>btn.onclick=()=>{document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));btn.classList.add('active');let tab=btn.dataset.tab;$('dashboardSection').classList.toggle('hidden',tab!=='dashboard');$('tournamentSection').classList.toggle('hidden',tab!=='tournaments');$('expenseSection').classList.toggle('hidden',tab!=='expenses');$('incomeSection').classList.toggle('hidden',tab!=='income');$('performanceSection').classList.toggle('hidden',tab!=='performance');$('calendarSection').classList.toggle('hidden',tab!=='calendar');if(tab==='dashboard')renderDashboard();if(tab==='performance')renderPerformance();if(tab==='calendar')renderCalendar()});
+document.querySelectorAll('.tab').forEach(btn=>btn.onclick=()=>{document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));btn.classList.add('active');let tab=btn.dataset.tab;$('dashboardSection').classList.toggle('hidden',tab!=='dashboard');$('tournamentSection').classList.toggle('hidden',tab!=='tournaments');$('expenseSection').classList.toggle('hidden',tab!=='expenses');$('incomeSection').classList.toggle('hidden',tab!=='income');$('performanceSection').classList.toggle('hidden',tab!=='performance');
+  $('calendarSection').classList.toggle('hidden',tab!=='calendar');if(tab==='dashboard')renderDashboard();if(tab==='performance')renderPerformance()});
 $('dashYear').onchange=()=>{dashYear=$('dashYear').value;renderDashboard()};
 
 $('performanceYear').onchange=()=>renderPerformance();
@@ -1103,17 +818,7 @@ buildPerformanceYearFilter();
 
 $('form').onsubmit=async e=>{e.preventDefault();try{if(mode==='expense'){const id=edit?.id||newId(),date=$('expenseDate').value,description=$('expenseDescription').value.trim(),amount=Number($('expenseAmount').value);if(!date||!description||!(amount>0)){alert('Please enter Date, Description and a valid Amount.');return}const x=[id,date,$('expenseCategory').value,description,amount,$('expenseNotes').value.trim()];if(edit)await db.execute('UPDATE chess_expenses SET date=?,category=?,description=?,amount=?,notes=? WHERE id=?',[x[1],x[2],x[3],x[4],x[5],id]);else await db.execute('INSERT INTO chess_expenses (id,date,category,description,amount,notes) VALUES (?,?,?,?,?,?)',x);close();await load();return}
 if(mode==='income'){const id=edit?.id||newId(),date=$('incomeDate').value,description=$('incomeDescription').value.trim(),amount=Number($('incomeAmount').value);if(!date||!description||!(amount>0)){alert('Please enter Date, Description and a valid Amount.');return}const x=[id,date,$('incomeCategory').value,description,amount,$('incomeNotes').value.trim()];if(edit)await db.execute('UPDATE chess_income SET date=?,category=?,description=?,amount=?,notes=? WHERE id=?',[x[1],x[2],x[3],x[4],x[5],id]);else await db.execute('INSERT INTO chess_income (id,date,category,description,amount,notes) VALUES (?,?,?,?,?,?)',x);close();await load();return}
-const id=edit?.id||newId();const vals={name:$('name').value.trim(),date:$('date').value,location:$('location').value.trim(),organizer:$('organizer').value.trim(),mode:$('mode').value,tournament_type:$('tournamentType').value,rating_category:$('ratingCategory').value,custom_category:$('customCategory').value.trim(),format:$('format').value,participants:Number($('participants').value||0),rounds:Number($('rounds').value||0),time_control:$('time').value.trim(),rating:Number($('rating').value||0),position:Number($('position').value||0),score:$('score').value.trim(),performance:Number($('performance').value||0),prize:Number($('prizeInput').value||0),registration:Number($('registration').value||0),travel:Number($('travel').value||0),food:Number($('food').value||0),accommodation:Number($('accommodation').value||0),other:Number($('other').value||0),notes:$('notes').value.trim()};if(!vals.name||!vals.date){alert('Please enter tournament name and date.');return}const p=[vals.name,vals.date,vals.location,vals.organizer,vals.tournament_type,vals.rating_category,vals.custom_category,vals.format,vals.participants,vals.rounds,vals.time_control,vals.rating,vals.position,vals.score,vals.performance,vals.prize,vals.registration,vals.travel,vals.food,vals.accommodation,vals.other,vals.notes];if(edit)await db.execute(`UPDATE tournaments SET name=?,date=?,location=?,organizer=?,mode=?,tournament_type=?,rating_category=?,custom_category=?,format=?,participants=?,rounds=?,time_control=?,rating=?,position=?,score=?,performance=?,prize=?,registration=?,travel=?,food=?,accommodation=?,other=?,notes=? WHERE id=?`,[vals.name,vals.date,vals.location,vals.organizer,vals.mode,...p.slice(4),id]);else await db.execute(`INSERT INTO tournaments (id,name,date,location,organizer,mode,tournament_type,rating_category,custom_category,format,participants,rounds,time_control,rating,position,score,performance,prize,registration,travel,food,accommodation,other,notes) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,[id,vals.name,vals.date,vals.location,vals.organizer,vals.mode,...p.slice(4)]);
-
-if(window.convertingEventId){
-  await db.execute('DELETE FROM events WHERE id=?',[window.convertingEventId]);
-  window.convertingEventId=null;
-}
-
-close();
-await load();
-renderCalendar();
-}catch(err){console.error(err);alert('Could not save. '+err)} };
+const id=edit?.id||newId();const vals={name:$('name').value.trim(),date:$('date').value,location:$('location').value.trim(),organizer:$('organizer').value.trim(),mode:$('mode').value,tournament_type:$('tournamentType').value,rating_category:$('ratingCategory').value,custom_category:$('customCategory').value.trim(),format:$('format').value,participants:Number($('participants').value||0),rounds:Number($('rounds').value||0),time_control:$('time').value.trim(),rating:Number($('rating').value||0),position:Number($('position').value||0),score:$('score').value.trim(),performance:Number($('performance').value||0),prize:Number($('prizeInput').value||0),registration:Number($('registration').value||0),travel:Number($('travel').value||0),food:Number($('food').value||0),accommodation:Number($('accommodation').value||0),other:Number($('other').value||0),notes:$('notes').value.trim()};if(!vals.name||!vals.date){alert('Please enter tournament name and date.');return}const p=[vals.name,vals.date,vals.location,vals.organizer,vals.tournament_type,vals.rating_category,vals.custom_category,vals.format,vals.participants,vals.rounds,vals.time_control,vals.rating,vals.position,vals.score,vals.performance,vals.prize,vals.registration,vals.travel,vals.food,vals.accommodation,vals.other,vals.notes];if(edit)await db.execute(`UPDATE tournaments SET name=?,date=?,location=?,organizer=?,mode=?,tournament_type=?,rating_category=?,custom_category=?,format=?,participants=?,rounds=?,time_control=?,rating=?,position=?,score=?,performance=?,prize=?,registration=?,travel=?,food=?,accommodation=?,other=?,notes=? WHERE id=?`,[vals.name,vals.date,vals.location,vals.organizer,vals.mode,...p.slice(4),id]);else await db.execute(`INSERT INTO tournaments (id,name,date,location,organizer,mode,tournament_type,rating_category,custom_category,format,participants,rounds,time_control,rating,position,score,performance,prize,registration,travel,food,accommodation,other,notes) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,[id,vals.name,vals.date,vals.location,vals.organizer,vals.mode,...p.slice(4)]);close();await load()}catch(err){console.error(err);alert('Could not save. '+err)}};
 async function backup(){
   try{
     const payload={version:4,exportedAt:new Date().toISOString(),tournaments:data,expenses,incomes};
