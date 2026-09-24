@@ -1,5 +1,5 @@
 <!doctype html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Chess Ledger</title><link rel="stylesheet" href="style.css"></head><body>
-<header><div><h1>♟ Chess Ledger</h1><p>Tournaments & other expenses</p></div><div class="header-actions"><input id="restoreFile" type="file" accept="application/json" hidden><button id="addIncomeBtn">+ Other Income</button><button id="addExpenseBtn">+ Other Expense</button><button id="addBtn" class="primary">+ Tournament</button></div></header>
+<header><div><h1>♟ Chess Ledger</h1><p>Chess tournaments & finances</p></div><div class="header-actions"><input id="restoreFile" type="file" accept="application/json" hidden><button id="addIncomeBtn">+ Other Income</button><button id="addExpenseBtn">+ Other Expense</button><button id="addBtn" class="primary">+ Tournament</button></div></header>
 <main>
 <section class="stats dashboard-summary"> <div><span>Tournaments</span><b id="count">0</b></div><div><span>Tournament Expenses</span><b id="expense">₹0</b></div><div><span>Other Expenses</span><b id="chessExpense">₹0</b></div><div><span>Prize Money</span><b id="prize">₹0</b></div><div><span>Other Income</span><b id="otherIncome">₹0</b></div><div><span>Total Income</span><b id="totalIncome">₹0</b></div><div><span>Overall Expense</span><b id="overall">₹0</b></div><div class="net-result-card">
   <span>NET RESULT</span>
@@ -275,7 +275,7 @@
 
         <label>
           Date
-          <input id="eventDate" type="date" required>
+          <input id="eventDate" type="text" placeholder="DD-MM-YYYY" required>
         </label>
 
         <label>
@@ -309,7 +309,7 @@
 
         <label>
           Registration Deadline
-          <input id="eventDeadline" type="date">
+          <input id="eventDeadline" type="text" placeholder="DD-MM-YYYY">
         </label>
 
         <label>
@@ -338,7 +338,7 @@
 </div>
 <div id="modal" class="modal hidden"><div class="dialog"><div class="head"><h2 id="title">Add Tournament</h2><button id="close">×</button></div>
 <form id="form"><input type="hidden" id="id"><div id="tournamentFields"><h3>🏆 Tournament</h3><div class="grid">
-<label>Name *<input id="name" required></label><label>Date *<input id="date" type="date" required></label><label>Location<input id="location"></label><label>Organizer<input id="organizer"></label>
+<label>Name *<input id="name" required></label><label>Date *<input id="date" type="text" placeholder="DD-MM-YYYY" required></label><label>Location<input id="location"></label><label>Organizer<input id="organizer"></label>
 <label>Mode<select id="mode"><option>Offline</option><option>Online</option></select></label>
 <label>Tournament type<select id="tournamentType"><option>Open</option><option>Rated</option><option>Unrated</option><option>Team</option><option>Junior</option><option>Women's</option><option>Club</option><option>School/College</option><option>Other</option></select></label>
 <label>Rating category<select id="ratingCategory"><option>Open</option><option>Below 2000</option><option>Below 1900</option><option>Below 1800</option><option>Below 1700</option><option>Below 1600</option><option>Below 1500</option><option>Below 1400</option><option>Below 1200</option><option>Unrated</option><option>Other / Custom</option></select></label>
@@ -346,6 +346,6 @@
 <h3>♟ My Performance</h3><div class="grid"><label>My rating<input id="rating" type="number" min="0"></label><label>Final position<input id="position" type="number" min="1"></label><label>Points Scored<input id="score" type="number" min="0" step="0.5" placeholder="e.g. 6"></label><label>Tournament Performance Score<input id="performance" type="number" min="0" max="100" step="0.1" readonly placeholder="Auto"></label><label>Prize money (₹)<input id="prizeInput" type="number" min="0" step="0.01" value="0"></label> </div>
 <h3>💰 Tournament Expenses</h3><div class="grid"><label>Registration<input id="registration" type="number" min="0" step="0.01" value="0"></label><label>Travel<input id="travel" type="number" min="0" step="0.01" value="0"></label><label>Food<input id="food" type="number" min="0" step="0.01" value="0"></label><label>Accommodation<input id="accommodation" type="number" min="0" step="0.01" value="0"></label><label>Other<input id="other" type="number" min="0" step="0.01" value="0"></label></div>
 <label>Notes<textarea id="notes"></textarea></label><div class="calc"><span>Total tournament expense: <b id="total">₹0</b></span><span>Net tournament result: <b id="result">₹0</b></span></div></div>
-<div id="incomeFields" class="hidden"><h3>💵 Other Income</h3><div class="grid"><label>Date *<input id="incomeDate" type="date" required></label><label>Category<select id="incomeCategory"><option>Coaching / Training</option><option>Arbiter Fee</option><option>Tournament Organizing</option><option>Chess Commentary</option><option>Online Coaching</option><option>Chess Workshop</option><option>Chess Content</option><option>Other Income</option></select></label><label>Description *<input id="incomeDescription" required></label><label>Amount (₹) *<input id="incomeAmount" type="number" min="0" step="0.01" required></label></div><label>Notes<textarea id="incomeNotes"></textarea></label></div><div id="expenseFields" class="hidden"><h3>💰 Other Expense</h3><div class="grid"><label>Date *<input id="expenseDate" type="date" required></label><label>Category<select id="expenseCategory"><option>Chess Books</option><option>Coaching / Training</option><option>Online Tournament</option><option>Chess Software</option><option>Chess Courses</option><option>Chess Equipment</option><option>Chess Travel</option><option>Club Fee</option><option>Other Expense</option></select></label><label>Description *<input id="expenseDescription" required></label><label>Amount (₹) *<input id="expenseAmount" type="number" min="0" step="0.01" required></label></div><label>Notes<textarea id="expenseNotes"></textarea></label></div>
+<div id="incomeFields" class="hidden"><h3>💵 Other Income</h3><div class="grid"><label>Date *<input id="incomeDate" type="text" placeholder="DD-MM-YYYY" required></label><label>Category<select id="incomeCategory"><option>Coaching / Training</option><option>Arbiter Fee</option><option>Tournament Organizing</option><option>Chess Commentary</option><option>Online Coaching</option><option>Chess Workshop</option><option>Chess Content</option><option>Other Income</option></select></label><label>Description *<input id="incomeDescription" required></label><label>Amount (₹) *<input id="incomeAmount" type="number" min="0" step="0.01" required></label></div><label>Notes<textarea id="incomeNotes"></textarea></label></div><div id="expenseFields" class="hidden"><h3>💰 Other Expense</h3><div class="grid"><label>Date *<input id="expenseDate" type="text" placeholder="DD-MM-YYYY" required></label><label>Category<select id="expenseCategory"><option>Chess Books</option><option>Coaching / Training</option><option>Online Tournament</option><option>Chess Software</option><option>Chess Courses</option><option>Chess Equipment</option><option>Chess Travel</option><option>Club Fee</option><option>Other Expense</option></select></label><label>Description *<input id="expenseDescription" required></label><label>Amount (₹) *<input id="expenseAmount" type="number" min="0" step="0.01" required></label></div><label>Notes<textarea id="expenseNotes"></textarea></label></div>
 <div class="actions"><button type="button" id="cancel">Cancel</button><button type="submit" class="primary">Save</button></div></form></div></div>
 <script type="module" src="app.js"></script></body></html>

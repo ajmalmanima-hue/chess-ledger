@@ -116,7 +116,9 @@ async function init(){
 `);
 await load();
 }
-async function load(){data=await db.select('SELECT * FROM tournaments ORDER BY date DESC, created_at DESC');expenses=await db.select('SELECT * FROM chess_expenses ORDER BY date DESC, created_at DESC');incomes=await db.select('SELECT * FROM chess_income ORDER BY date DESC, created_at DESC');events=await db.select('SELECT * FROM events ORDER BY date ASC, created_at ASC');buildPerformanceYearFilter();render();checkEventReminders()}
+async function load(){
+data=await db.select('SELECT * FROM tournaments ORDER BY date DESC, created_at DESC');expenses=await db.select('SELECT * FROM chess_expenses ORDER BY date DESC, created_at DESC');incomes=await db.select('SELECT * FROM chess_income ORDER BY date DESC, created_at DESC');events=await db.select('SELECT * FROM events ORDER BY date ASC, created_at ASC');
+buildPerformanceYearFilter();render();checkEventReminders()}
 function yearOf(date){return String(date||'').slice(0,4)}
 function escText(x){return esc(x)}
 function buildYearFilter(){
@@ -234,7 +236,7 @@ function renderPerformance(){
 
   const bestPosition=positions.length?Math.min(...positions):0;
 
-  $('perfCount').textContent=performanceRows.length;
+  $('perfCount').textContent=rows.length;
   $('avgTPS').textContent=average?average.toFixed(1):'—';
   $('bestTPS').textContent=best?best.toFixed(1):'—';
   $('bestPosition').textContent=bestPosition?bestPosition:'—';
@@ -847,12 +849,20 @@ window.editEvent=id=>{
   $('eventModalTitle').textContent='Edit Event';
   $('eventId').value=e.id||'';
   $('eventName').value=e.name||'';
-  $('eventDate').value=e.date||today();
+  $('eventDate').value='';
+  if(e.date){
+    const parts=e.date.split('-');
+    if(parts.length===3)$('eventDate').value=`${parts[2]}-${parts[1]}-${parts[0]}`;
+  }
   $('eventLocation').value=e.location||'';
   $('eventOrganizer').value=e.organizer||'';
   $('eventMode').value=e.mode||'Offline';
   $('eventFormat').value=e.format||'Classical';
-  $('eventDeadline').value=e.deadline||'';
+  $('eventDeadline').value='';
+  if(e.deadline){
+    const parts=e.deadline.split('-');
+    if(parts.length===3)$('eventDeadline').value=`${parts[2]}-${parts[1]}-${parts[0]}`;
+  }
   $('eventReminder').value=e.reminder??'-1';
   $('eventNotes').value=e.notes||'';
 
@@ -914,7 +924,7 @@ function openEvent(){
   $('eventModalTitle').textContent='Add Event';
   $('eventId').value='';
   $('eventName').value='';
-  $('eventDate').value=today();
+  $('eventDate').value='';
   $('eventLocation').value='';
   $('eventOrganizer').value='';
   $('eventMode').value='Offline';
@@ -943,17 +953,23 @@ $('eventForm').onsubmit=async e=>{
   const id=existingId||newId();
 
   const name=$('eventName').value.trim();
-  const date=$('eventDate').value;
+  const eventDateInput=$('eventDate').value.trim();
+  const date=parseTournamentDate(eventDateInput);
   const location=$('eventLocation').value.trim();
   const organizer=$('eventOrganizer').value.trim();
   const mode=$('eventMode').value;
   const format=$('eventFormat').value;
-  const deadline=$('eventDeadline').value;
+  const deadlineInput=$('eventDeadline').value.trim();
+  const deadline=deadlineInput?parseTournamentDate(deadlineInput):'';
+  if(deadlineInput&&!deadline){
+    alert('Please enter a valid deadline in DD-MM-YYYY format.');
+    return;
+  }
   const reminder=Number($('eventReminder').value);
   const notes=$('eventNotes').value.trim();
 
   if(!name||!date){
-    alert('Please enter Event Name and Date.');
+    alert('Please enter Event Name and a valid date in DD-MM-YYYY format.');
     return;
   }
 
@@ -1152,13 +1168,66 @@ function calculateTPS(){
 
   $('performance').value=tps.toFixed(1);
 }
-function openTournament(t){clearModalRequired();mode='tournament';edit=t||null;$('title').textContent=t?'Edit Tournament':'Add Tournament';$('tournamentFields').classList.remove('hidden');$('expenseFields').classList.add('hidden');$('incomeFields').classList.add('hidden');$('expenseDescription').required=false;$('expenseAmount').required=false;let fields={id:'id',name:'name',date:'date',location:'location',organizer:'organizer',mode:'mode',tournamentType:'tournament_type',ratingCategory:'rating_category',customCategory:'custom_category',format:'format',participants:'participants',rounds:'rounds',time:'time_control',rating:'rating',position:'position',score:'score',performance:'performance',prizeInput:'prize',registration:'registration',travel:'travel',food:'food',accommodation:'accommodation',other:'other',notes:'notes'};for(const [id,key] of Object.entries(fields))$(id).value=t?(t[key]??''):'';if(!t){$('date').value=today();$('tournamentType').value='Open';$('ratingCategory').value='Open';$('format').value='Classical';$('mode').value='Offline';['prizeInput','registration','travel','food','accommodation','other'].forEach(id=>$(id).value=0)}calc();$('modal').classList.remove('hidden')}
-function openIncome(e){clearModalRequired();mode='income';edit=e||null;$('title').textContent=e?'Edit Chess Income':'Add Chess Income';$('tournamentFields').classList.add('hidden');$('expenseFields').classList.add('hidden');$('incomeFields').classList.remove('hidden');$('expenseDescription').required=false;$('expenseAmount').required=false;$('incomeDescription').required=true;$('incomeAmount').required=true;$('incomeDate').value=e?.date||today();$('incomeCategory').value=e?.category||'Coaching / Training';$('incomeDescription').value=e?.description||'';$('incomeAmount').value=e?.amount??'';$('incomeNotes').value=e?.notes||'';$('modal').classList.remove('hidden')}
-function openExpense(e){clearModalRequired();mode='expense';edit=e||null;$('title').textContent=e?'Edit Other Expense':'Add Other Expense';$('tournamentFields').classList.add('hidden');$('expenseFields').classList.remove('hidden');$('incomeFields').classList.add('hidden');$('expenseDescription').required=true;$('expenseAmount').required=true;$('id').value=e?.id||'';$('expenseDate').value=e?.date||today();$('expenseCategory').value=e?.category||'Chess Books';$('expenseDescription').value=e?.description||'';$('expenseAmount').value=e?.amount??'';$('expenseNotes').value=e?.notes||'';$('modal').classList.remove('hidden')}
+function openTournament(t){clearModalRequired();mode='tournament';edit=t||null;$('title').textContent=t?'Edit Tournament':'Add Tournament';$('tournamentFields').classList.remove('hidden');$('expenseFields').classList.add('hidden');$('incomeFields').classList.add('hidden');$('expenseDescription').required=false;$('expenseAmount').required=false;let fields={id:'id',name:'name',date:'date',location:'location',organizer:'organizer',mode:'mode',tournamentType:'tournament_type',ratingCategory:'rating_category',customCategory:'custom_category',format:'format',participants:'participants',rounds:'rounds',time:'time_control',rating:'rating',position:'position',score:'score',performance:'performance',prizeInput:'prize',registration:'registration',travel:'travel',food:'food',accommodation:'accommodation',other:'other',notes:'notes'};for(const [id,key] of Object.entries(fields))$(id).value=t?(t[key]??''):'';if(t&&t.date){const parts=t.date.split('-');if(parts.length===3)$('date').value=`${parts[2]}-${parts[1]}-${parts[0]}`;}if(!t){$('date').value='';$('tournamentType').value='Open';$('ratingCategory').value='Open';$('format').value='Classical';$('mode').value='Offline';['prizeInput','registration','travel','food','accommodation','other'].forEach(id=>$(id).value=0)}calc();$('modal').classList.remove('hidden')}
+function openIncome(e){clearModalRequired();mode='income';edit=e||null;$('title').textContent=e?'Edit Chess Income':'Add Chess Income';$('tournamentFields').classList.add('hidden');$('expenseFields').classList.add('hidden');$('incomeFields').classList.remove('hidden');$('expenseDescription').required=false;$('expenseAmount').required=false;$('incomeDescription').required=true;$('incomeAmount').required=true;$('incomeDate').value='';
+  if(e?.date){
+    const parts=e.date.split('-');
+    if(parts.length===3)$('incomeDate').value=`${parts[2]}-${parts[1]}-${parts[0]}`;
+  }$('incomeCategory').value=e?.category||'Coaching / Training';$('incomeDescription').value=e?.description||'';$('incomeAmount').value=e?.amount??'';$('incomeNotes').value=e?.notes||'';$('modal').classList.remove('hidden')}
+function openExpense(e){clearModalRequired();mode='expense';edit=e||null;$('title').textContent=e?'Edit Other Expense':'Add Other Expense';$('tournamentFields').classList.add('hidden');$('expenseFields').classList.remove('hidden');$('incomeFields').classList.add('hidden');$('expenseDescription').required=true;$('expenseAmount').required=true;$('id').value=e?.id||'';$('expenseDate').value='';
+  if(e?.date){
+    const parts=e.date.split('-');
+    if(parts.length===3)$('expenseDate').value=`${parts[2]}-${parts[1]}-${parts[0]}`;
+  }$('expenseCategory').value=e?.category||'Chess Books';$('expenseDescription').value=e?.description||'';$('expenseAmount').value=e?.amount??'';$('expenseNotes').value=e?.notes||'';$('modal').classList.remove('hidden')}
 function close(){$('modal').classList.add('hidden')}
 window.editT=id=>openTournament(data.find(t=>t.id===id));window.editE=id=>openExpense(expenses.find(e=>e.id===id));window.editI=id=>openIncome(incomes.find(e=>e.id===id));
 window.delT=async id=>{if(confirm('Delete this tournament?')){await db.execute('DELETE FROM tournaments WHERE id=?',[id]);await load()}};
 window.delE=async id=>{if(confirm('Delete this chess expense?')){await db.execute('DELETE FROM chess_expenses WHERE id=?',[id]);await load()}};window.delI=async id=>{if(confirm('Delete this chess income?')){await db.execute('DELETE FROM chess_income WHERE id=?',[id]);await load()}};
+$('date').addEventListener('input',()=>{
+  let v=$('date').value.replace(/\D/g,'').slice(0,8);
+
+  if(v.length>4){
+    v=v.slice(0,2)+'-'+v.slice(2,4)+'-'+v.slice(4);
+  }else if(v.length>2){
+    v=v.slice(0,2)+'-'+v.slice(2);
+  }
+
+  $('date').value=v;
+});
+
+$('eventDate').addEventListener('input',()=>{
+  let v=$('eventDate').value.replace(/\D/g,'').slice(0,8);
+
+  if(v.length>4){
+    v=v.slice(0,2)+'-'+v.slice(2,4)+'-'+v.slice(4);
+  }else if(v.length>2){
+    v=v.slice(0,2)+'-'+v.slice(2);
+  }
+
+  $('eventDate').value=v;
+});
+
+$('eventDeadline').addEventListener('input',()=>{
+  let v=$('eventDeadline').value.replace(/\D/g,'').slice(0,8);
+  if(v.length>4)v=v.slice(0,2)+'-'+v.slice(2,4)+'-'+v.slice(4);
+  else if(v.length>2)v=v.slice(0,2)+'-'+v.slice(2);
+  $('eventDeadline').value=v;
+});
+
+$('incomeDate').addEventListener('input',()=>{
+  let v=$('incomeDate').value.replace(/\D/g,'').slice(0,8);
+  if(v.length>4)v=v.slice(0,2)+'-'+v.slice(2,4)+'-'+v.slice(4);
+  else if(v.length>2)v=v.slice(0,2)+'-'+v.slice(2);
+  $('incomeDate').value=v;
+});
+
+$('expenseDate').addEventListener('input',()=>{
+  let v=$('expenseDate').value.replace(/\D/g,'').slice(0,8);
+  if(v.length>4)v=v.slice(0,2)+'-'+v.slice(2,4)+'-'+v.slice(4);
+  else if(v.length>2)v=v.slice(0,2)+'-'+v.slice(2);
+  $('expenseDate').value=v;
+});
+
 function calc(){let e=['registration','travel','food','accommodation','other'].reduce((s,id)=>s+Number($(id).value||0),0),n=Number($('prizeInput').value||0)-e;$('total').textContent=money(e);$('result').textContent=(n>=0?'+':'-')+money(Math.abs(n));$('result').className=n>=0?'positive':'negative'}
 $('addBtn').onclick=()=>openTournament();$('addExpenseBtn').onclick=()=>openExpense();$('addIncomeBtn').onclick=()=>openIncome();$('close').onclick=close;$('cancel').onclick=close;$('search').oninput=render;$('filterMode').onchange=render;$('filterType').onchange=render;$('filterFormat').onchange=render;$('filterCategory').onchange=render;$('filterYear').onchange=render;$('clearFiltersBtn').onclick=()=>{$('search').value='';$('filterMode').value='all';$('filterType').value='all';$('filterFormat').value='all';$('filterCategory').value='all';$('filterYear').value='all';render();}; $('filterFormat').onchange=render;$('filterCategory').onchange=render;$('filterYear').onchange=render; $('filterType').onchange=render; $('expenseSearch').oninput=render;$('incomeSearch').oninput=render;
 $('expenseYear').onchange=render;
@@ -1206,9 +1275,25 @@ function buildPerformanceYearFilter(){
 }
 buildPerformanceYearFilter();
 
-$('form').onsubmit=async e=>{e.preventDefault();try{if(mode==='expense'){const id=edit?.id||newId(),date=$('expenseDate').value,description=$('expenseDescription').value.trim(),amount=Number($('expenseAmount').value);if(!date||!description||!(amount>0)){alert('Please enter Date, Description and a valid Amount.');return}const x=[id,date,$('expenseCategory').value,description,amount,$('expenseNotes').value.trim()];if(edit)await db.execute('UPDATE chess_expenses SET date=?,category=?,description=?,amount=?,notes=? WHERE id=?',[x[1],x[2],x[3],x[4],x[5],id]);else await db.execute('INSERT INTO chess_expenses (id,date,category,description,amount,notes) VALUES (?,?,?,?,?,?)',x);close();await load();return}
-if(mode==='income'){const id=edit?.id||newId(),date=$('incomeDate').value,description=$('incomeDescription').value.trim(),amount=Number($('incomeAmount').value);if(!date||!description||!(amount>0)){alert('Please enter Date, Description and a valid Amount.');return}const x=[id,date,$('incomeCategory').value,description,amount,$('incomeNotes').value.trim()];if(edit)await db.execute('UPDATE chess_income SET date=?,category=?,description=?,amount=?,notes=? WHERE id=?',[x[1],x[2],x[3],x[4],x[5],id]);else await db.execute('INSERT INTO chess_income (id,date,category,description,amount,notes) VALUES (?,?,?,?,?,?)',x);close();await load();return}
-const id=edit?.id||newId();const vals={name:$('name').value.trim(),date:$('date').value,location:$('location').value.trim(),organizer:$('organizer').value.trim(),mode:$('mode').value,tournament_type:$('tournamentType').value,rating_category:$('ratingCategory').value,custom_category:$('customCategory').value.trim(),format:$('format').value,participants:Number($('participants').value||0),rounds:Number($('rounds').value||0),time_control:$('time').value.trim(),rating:Number($('rating').value||0),position:Number($('position').value||0),score:$('score').value.trim(),performance:Number($('performance').value||0),prize:Number($('prizeInput').value||0),registration:Number($('registration').value||0),travel:Number($('travel').value||0),food:Number($('food').value||0),accommodation:Number($('accommodation').value||0),other:Number($('other').value||0),notes:$('notes').value.trim()};if(!vals.name||!vals.date){alert('Please enter tournament name and date.');return}const p=[vals.name,vals.date,vals.location,vals.organizer,vals.tournament_type,vals.rating_category,vals.custom_category,vals.format,vals.participants,vals.rounds,vals.time_control,vals.rating,vals.position,vals.score,vals.performance,vals.prize,vals.registration,vals.travel,vals.food,vals.accommodation,vals.other,vals.notes];if(edit)await db.execute(`UPDATE tournaments SET name=?,date=?,location=?,organizer=?,mode=?,tournament_type=?,rating_category=?,custom_category=?,format=?,participants=?,rounds=?,time_control=?,rating=?,position=?,score=?,performance=?,prize=?,registration=?,travel=?,food=?,accommodation=?,other=?,notes=? WHERE id=?`,[vals.name,vals.date,vals.location,vals.organizer,vals.mode,...p.slice(4),id]);else await db.execute(`INSERT INTO tournaments (id,name,date,location,organizer,mode,tournament_type,rating_category,custom_category,format,participants,rounds,time_control,rating,position,score,performance,prize,registration,travel,food,accommodation,other,notes) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,[id,vals.name,vals.date,vals.location,vals.organizer,vals.mode,...p.slice(4)]);
+function parseTournamentDate(value){
+  const m=value.match(/^(\d{2})-(\d{2})-(\d{4})$/);
+  if(!m)return null;
+
+  const day=Number(m[1]);
+  const month=Number(m[2]);
+  const year=Number(m[3]);
+
+  if(month<1||month>12||day<1||day>31||year<1)return null;
+
+  const d=new Date(year,month-1,day);
+  if(d.getFullYear()!==year||d.getMonth()!==month-1||d.getDate()!==day)return null;
+
+  return `${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+}
+
+$('form').onsubmit=async e=>{e.preventDefault();try{if(mode==='expense'){const id=edit?.id||newId(),date=parseTournamentDate($('expenseDate').value.trim()),description=$('expenseDescription').value.trim(),amount=Number($('expenseAmount').value);if(!date||!description||!(amount>0)){alert('Please enter Date, Description and a valid Amount.');return}const x=[id,date,$('expenseCategory').value,description,amount,$('expenseNotes').value.trim()];if(edit)await db.execute('UPDATE chess_expenses SET date=?,category=?,description=?,amount=?,notes=? WHERE id=?',[x[1],x[2],x[3],x[4],x[5],id]);else await db.execute('INSERT INTO chess_expenses (id,date,category,description,amount,notes) VALUES (?,?,?,?,?,?)',x);close();await load();return}
+if(mode==='income'){const id=edit?.id||newId(),date=parseTournamentDate($('incomeDate').value.trim()),description=$('incomeDescription').value.trim(),amount=Number($('incomeAmount').value);if(!date||!description||!(amount>0)){alert('Please enter Date, Description and a valid Amount.');return}const x=[id,date,$('incomeCategory').value,description,amount,$('incomeNotes').value.trim()];if(edit)await db.execute('UPDATE chess_income SET date=?,category=?,description=?,amount=?,notes=? WHERE id=?',[x[1],x[2],x[3],x[4],x[5],id]);else await db.execute('INSERT INTO chess_income (id,date,category,description,amount,notes) VALUES (?,?,?,?,?,?)',x);close();await load();return}
+const id=edit?.id||newId();const tournamentDate=parseTournamentDate($('date').value.trim());if(!tournamentDate){alert('Please enter a valid date in DD-MM-YYYY format.');return}const vals={name:$('name').value.trim(),date:tournamentDate,location:$('location').value.trim(),organizer:$('organizer').value.trim(),mode:$('mode').value,tournament_type:$('tournamentType').value,rating_category:$('ratingCategory').value,custom_category:$('customCategory').value.trim(),format:$('format').value,participants:Number($('participants').value||0),rounds:Number($('rounds').value||0),time_control:$('time').value.trim(),rating:Number($('rating').value||0),position:Number($('position').value||0),score:$('score').value.trim(),performance:Number($('performance').value||0),prize:Number($('prizeInput').value||0),registration:Number($('registration').value||0),travel:Number($('travel').value||0),food:Number($('food').value||0),accommodation:Number($('accommodation').value||0),other:Number($('other').value||0),notes:$('notes').value.trim()};if(!vals.name||!vals.date){alert('Please enter tournament name and date.');return}const p=[vals.name,vals.date,vals.location,vals.organizer,vals.tournament_type,vals.rating_category,vals.custom_category,vals.format,vals.participants,vals.rounds,vals.time_control,vals.rating,vals.position,vals.score,vals.performance,vals.prize,vals.registration,vals.travel,vals.food,vals.accommodation,vals.other,vals.notes];if(edit)await db.execute(`UPDATE tournaments SET name=?,date=?,location=?,organizer=?,mode=?,tournament_type=?,rating_category=?,custom_category=?,format=?,participants=?,rounds=?,time_control=?,rating=?,position=?,score=?,performance=?,prize=?,registration=?,travel=?,food=?,accommodation=?,other=?,notes=? WHERE id=?`,[vals.name,vals.date,vals.location,vals.organizer,vals.mode,...p.slice(4),id]);else await db.execute(`INSERT INTO tournaments (id,name,date,location,organizer,mode,tournament_type,rating_category,custom_category,format,participants,rounds,time_control,rating,position,score,performance,prize,registration,travel,food,accommodation,other,notes) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,[id,vals.name,vals.date,vals.location,vals.organizer,vals.mode,...p.slice(4)]);
 
 if(window.convertingEventId){
   await db.execute('DELETE FROM events WHERE id=?',[window.convertingEventId]);
@@ -1417,6 +1502,7 @@ $('restoreFile').onchange=async()=>{
 
 setupCurrency();
 init().then(()=>{
+  document.querySelector('.tab[data-tab="dashboard"]').click();
   recordUsage();
 }).catch(err=>{console.error(err);document.body.insertAdjacentHTML('afterbegin','<div style="padding:12px;background:#fee;color:#900">Database could not be opened. Please run the Tauri app, not index.html directly.</div>')});
 ['participants','rounds','position','score'].forEach(id=>{
